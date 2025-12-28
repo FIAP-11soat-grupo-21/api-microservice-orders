@@ -1,0 +1,148 @@
+name: Validation
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [ main ]
+    paths:
+      - 'infra/**'
+      - 'microservice/**'
+
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  analyze:
+    name: Static analysis
+    runs-on: ubuntu-latest
+    env:
+      SONAR_PROJECT_KEY: "FIAP-11soat-grupo-21_api-microservice-customer"
+      SONAR_ORGANIZATION: "fiap-11soat-grupo-21"
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+
+      - name: Install Dependencies
+        working-directory: microservice
+        run: go mod tidy
+
+      - name: Run Tests and Generate Coverage
+        working-directory: microservice
+        run: |
+          go test ./... -coverprofile=coverage.out
+
+      - name: Run GolangCI-Lint
+        working-directory: microservice
+        run: |
+          go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+          golangci-lint run --out-format json > golangci-lint-report.json
+
+      - name: Run Gosec Security Scanner
+        working-directory: microservice
+        run: |
+          go install github.com/securego/gosec/v2/cmd/gosec@latest
+          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+          gosec -no-fail -fmt=sonarqube -out report.json ./...
+
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@master
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          projectBaseDir: microservice
+          args: >
+            -Dsonar.verbose=true
+            -Dsonar.go.coverage.reportPaths=coverage.out
+            -Dsonar.projectKey=${{ env.SONAR_PROJECT_KEY }}
+            -Dsonar.organization=${{ env.SONAR_ORGANIZATION }}
+            -Dsonar.coverage.exclusions="**/*_test.go,**/*mock*.go,**/mocks/**"
+
+  RunTests:
+    name: Run Unit Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+
+      - name: Execute unit tests
+        working-directory: microservice
+        run: |
+          go test ./... -v 
+
+  Validation:
+    name: Terraform Plan (infra)
+    runs-on: ubuntu-latest
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      AWS_ROLE_ARN: ${{ vars.AWS_ROLE_ARN }}
+      GIT_SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+      TERRAFORM_VERSION: "1.6.6"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+
+      - name: Setup SSH agent for git
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ env.GIT_SSH_KEY }}
+
+      - name: configure aws credentials
+        uses: aws-actions/configure-aws-credentials@v5.1.0
+        with:
+          role-to-assume:  ${{ env.AWS_ROLE_ARN }}
+          role-session-name: GitHub_to_AWS_via_FederatedOIDC
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Terraform Init
+        working-directory: infra
+        run: |
+          terraform init
+
+      - name: Terraform Format Check
+        working-directory: infra
+        run: |
+          terraform fmt -check
+
+      - name: Terraform Validate
+        working-directory: infra
+        run: |
+          terraform validate
+
+      - name: Terraform Plan
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        working-directory: infra
+        run: |
+          terraform plan -input=false -var-file=values.tfvars -out=tfplan
+
+      - name: Upload plan artifact
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan
+          path: infra/tfplan
+
+      - name: Done
+        run: echo "Terraform job finished."
