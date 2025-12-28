@@ -3,7 +3,6 @@ package messaging
 import (
 	"fmt"
 	"log"
-	"sync"
 	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -14,7 +13,6 @@ import (
 var (
 	connection *amqp.Connection
 	channel    *amqp.Channel
-	once       sync.Once
 )
 
 func GetConnection() *amqp.Connection {

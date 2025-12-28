@@ -3,12 +3,10 @@ package use_cases
 import (
 	"errors"
 	"testing"
-	"time"
 
 	"microservice/internal/adapters/daos"
 	"microservice/internal/adapters/dtos"
 	"microservice/internal/adapters/gateways"
-	"microservice/internal/domain/entities"
 )
 
 type testOrderDataSource struct {
@@ -243,13 +241,7 @@ func TestFindAllOrderStatusUseCase_Execute_Integration(t *testing.T) {
 	}
 }
 
-func createTestOrderForUseCases(id string, customerID *string) *entities.Order {
-	status, _ := entities.NewOrderStatus("status-1", "Pending")
-	item, _ := entities.NewOrderItem("item-1", "product-1", id, 2, 10.0)
-	now := time.Now()
-	order, _ := entities.NewOrderWithItems(id, customerID, 20.0, *status, []entities.OrderItem{*item}, now, nil)
-	return order
-}
+
 
 
 type errorOrderDataSource struct{}
