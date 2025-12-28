@@ -19,7 +19,7 @@ jobs:
     name: Static analysis
     runs-on: ubuntu-latest
     env:
-      SONAR_PROJECT_KEY: "FIAP-11soat-grupo-21_api-microservice-customer"
+      SONAR_PROJECT_KEY: "FIAP-11soat-grupo-21_api-microservice-orders"
       SONAR_ORGANIZATION: "fiap-11soat-grupo-21"
 
     steps:
