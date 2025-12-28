@@ -94,9 +94,11 @@ func Close() {
 }
 
 func RunMigrations() {
-	dbConnection.AutoMigrate(
+	if err := dbConnection.AutoMigrate(
 		&models.OrderModel{},
 		&models.OrderItemModel{},
 		&models.OrderStatusModel{},
-	)
+	); err != nil {
+		log.Printf("Error running migrations: %v", err)
+	}
 }

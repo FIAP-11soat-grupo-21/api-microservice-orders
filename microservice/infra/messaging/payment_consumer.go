@@ -69,7 +69,9 @@ func (c *PaymentEventConsumer) handleMessage(msg amqp.Delivery) {
 	err := json.Unmarshal(msg.Body, &paymentEvent)
 	if err != nil {
 		log.Printf("Error unmarshaling payment event: %v", err)
-		msg.Nack(false, false)
+		if nackErr := msg.Nack(false, false); nackErr != nil {
+			log.Printf("Error nacking message: %v", nackErr)
+		}
 		return
 	}
 
@@ -83,6 +85,8 @@ func (c *PaymentEventConsumer) handleMessage(msg amqp.Delivery) {
 	fmt.Printf("Transaction ID: %s\n", paymentEvent.TransactionID)
 	fmt.Println("========================================")
 
-	msg.Ack(false)
+	if err := msg.Ack(false); err != nil {
+		log.Printf("Error acking message: %v", err)
+	}
 	log.Printf("Payment event processed successfully for order: %s", paymentEvent.OrderID)
 }
