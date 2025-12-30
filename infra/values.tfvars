@@ -15,13 +15,7 @@ container_environment_variables = {
 
 container_secrets = {}
 health_check_path = "/health"
-task_role_policy_arns = [
-  "arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess",
-  "cognito-idp:AdminInitiateAuth",
-  "cognito-idp:AdminUserGlobalSignOut",
-  "cognito-idp:ListUsers",
-  "cognito-idp:AdminGetUser"
-]
+task_role_policy_arns = []
 alb_is_internal = true
 
 # =======================================================
