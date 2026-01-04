@@ -43,12 +43,12 @@ module "dynamodb_table" {
 module "sqs_kitchen_orders" {
   source = "git::https://github.com/FIAP-11soat-grupo-21/infra-core.git//modules/SQS?ref=main"
 
-  sqs_queue_name                 = "${var.application_name}-kitchen-orders"
-  sqs_message_retention_seconds  = 86400 # 1 dia
-  sqs_visibility_timeout_seconds = 30
-  sqs_receive_wait_time_seconds  = 10
+  queue_name                 = "${var.application_name}-kitchen-orders"
+  message_retention_seconds  = 86400 # 1 dia
+  visibility_timeout_seconds = 30
+  receive_wait_time_seconds  = 10
 
-  tags = data.terraform_remote_state.infra.outputs.project_common_tags
+  project_common_tags = data.terraform_remote_state.infra.outputs.project_common_tags
 }
 
 module "order_api" {
