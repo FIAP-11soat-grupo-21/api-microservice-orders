@@ -23,11 +23,11 @@ func Connect() error {
 	log.Printf("Connecting to message broker: %s", cfg.MessageBroker.Type)
 
 	brokerConfig := brokers.BrokerConfig{
-		Type:                 cfg.MessageBroker.Type,
+		Type: cfg.MessageBroker.Type,
 		// SQS - Duas filas separadas
-		SQSPaymentQueueURL:   cfg.MessageBroker.SQS.PaymentQueueURL,
-		SQSKitchenQueueURL:   cfg.MessageBroker.SQS.KitchenQueueURL,
-		AWSRegion:            cfg.MessageBroker.SQS.AWSRegion,
+		SQSPaymentQueueURL: cfg.MessageBroker.SQS.PaymentQueueURL,
+		SQSKitchenQueueURL: cfg.MessageBroker.SQS.KitchenQueueURL,
+		AWSRegion:          cfg.MessageBroker.SQS.AWSRegion,
 		// RabbitMQ
 		RabbitMQURL:          buildRabbitMQURL(cfg),
 		RabbitMQPaymentQueue: cfg.MessageBroker.RabbitMQ.PaymentQueue,

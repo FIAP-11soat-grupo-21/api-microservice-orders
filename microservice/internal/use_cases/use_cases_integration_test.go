@@ -241,9 +241,6 @@ func TestFindAllOrderStatusUseCase_Execute_Integration(t *testing.T) {
 	}
 }
 
-
-
-
 type errorOrderDataSource struct{}
 
 func (ds *errorOrderDataSource) Create(order daos.OrderDAO) error {
@@ -596,7 +593,6 @@ func (ds *errorDeleteOrderDataSource) Update(order daos.OrderDAO) error {
 func (ds *errorDeleteOrderDataSource) Delete(id string) error {
 	return errors.New("delete error")
 }
-
 
 func TestCreateOrderUseCase_Execute_EmptyItems(t *testing.T) {
 	orderDS := newTestOrderDataSource()

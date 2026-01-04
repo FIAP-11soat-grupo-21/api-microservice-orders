@@ -14,9 +14,9 @@ import (
 )
 
 type SQSBroker struct {
-	client           *sqs.Client
-	paymentQueueURL  string
-	kitchenQueueURL  string
+	client          *sqs.Client
+	paymentQueueURL string
+	kitchenQueueURL string
 }
 
 func NewSQSBroker(brokerConfig BrokerConfig) (*SQSBroker, error) {

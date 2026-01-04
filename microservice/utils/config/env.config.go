@@ -24,14 +24,14 @@ type Config struct {
 
 	MessageBroker struct {
 		Type string // "sqs" ou "rabbitmq"
-		
+
 		// SQS
 		SQS struct {
-			PaymentQueueURL string 
-			KitchenQueueURL string 
+			PaymentQueueURL string
+			KitchenQueueURL string
 			AWSRegion       string
 		}
-		
+
 		// RabbitMQ
 		RabbitMQ struct {
 			URL          string // (ex: amqp://user:pass@host:port/)
@@ -84,12 +84,12 @@ func (c *Config) Load() *Config {
 
 	// Message Broker Configuration
 	c.MessageBroker.Type = getEnv("MESSAGE_BROKER_TYPE", "sqs")
-	
+
 	// SQS
 	c.MessageBroker.SQS.PaymentQueueURL = getEnv("SQS_PAYMENT_QUEUE_URL", "")
 	c.MessageBroker.SQS.KitchenQueueURL = getEnv("SQS_KITCHEN_QUEUE_URL", "")
 	c.MessageBroker.SQS.AWSRegion = getEnv("AWS_REGION", "us-east-2")
-	
+
 	// RabbitMQ
 	c.MessageBroker.RabbitMQ.URL = getEnv("RABBITMQ_URL", "amqp://guest:guest@localhost:5672/")
 	c.MessageBroker.RabbitMQ.PaymentQueue = getEnv("RABBITMQ_PAYMENT_QUEUE", "payment.confirmation")

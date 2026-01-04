@@ -35,10 +35,10 @@ type PaymentConfirmationDTO struct {
 }
 
 type PaymentConfirmationResult struct {
-	Order           entities.Order
-	StatusChanged   bool
+	Order               entities.Order
+	StatusChanged       bool
 	ShouldNotifyKitchen bool
-	Message         string
+	Message             string
 }
 
 func (uc *ProcessPaymentConfirmationUseCase) Execute(dto PaymentConfirmationDTO) (*PaymentConfirmationResult, error) {
@@ -147,7 +147,7 @@ func (uc *ProcessPaymentConfirmationUseCase) validateInput(dto PaymentConfirmati
 
 func (uc *ProcessPaymentConfirmationUseCase) canUpdateOrderStatus(order *entities.Order, newStatus string) bool {
 	currentStatus := order.Status.Name.Value()
-	
+
 	switch currentStatus {
 	case "pending", "created":
 		return newStatus == "confirmed" || newStatus == "failed" || newStatus == "cancelled"

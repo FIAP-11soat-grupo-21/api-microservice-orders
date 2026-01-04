@@ -51,7 +51,7 @@ func Init() {
 		log.Println("The application will continue without message queue support")
 	} else {
 		log.Println("Message broker connected successfully")
-		
+
 		processPaymentUseCase := factories.NewProcessPaymentConfirmationUseCase()
 		err = messaging.SetupPaymentConsumer(processPaymentUseCase)
 		if err != nil {

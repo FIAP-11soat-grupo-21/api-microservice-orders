@@ -103,16 +103,22 @@ func (r *RabbitMQBroker) ConsumePaymentConfirmations(ctx context.Context, handle
 
 				if err := r.processPaymentMessage(msg, handler); err != nil {
 					log.Printf("RabbitMQ: Error processing message: %v", err)
-					
+
 					if r.shouldDiscardMessage(err) {
 						log.Printf("RabbitMQ: Discarding message due to non-recoverable error: %v", err)
-						msg.Ack(false) // Acknowledge para remover da fila
+						if ackErr := msg.Ack(false); ackErr != nil {
+							log.Printf("RabbitMQ: Error acknowledging message: %v", ackErr)
+						}
 					} else {
 						log.Printf("RabbitMQ: Rejecting message without requeue")
-						msg.Nack(false, false) // Não recolocar na fila
+						if nackErr := msg.Nack(false, false); nackErr != nil {
+							log.Printf("RabbitMQ: Error nacking message: %v", nackErr)
+						}
 					}
 				} else {
-					msg.Ack(false)
+					if ackErr := msg.Ack(false); ackErr != nil {
+						log.Printf("RabbitMQ: Error acknowledging message: %v", ackErr)
+					}
 				}
 			}
 		}
@@ -134,7 +140,7 @@ func (r *RabbitMQBroker) processPaymentMessage(msg amqp.Delivery, handler Paymen
 
 func (r *RabbitMQBroker) shouldDiscardMessage(err error) bool {
 	errorMsg := err.Error()
-	
+
 	nonRecoverableErrors := []string{
 		"Order not found",
 		"Invalid order ID",
@@ -143,13 +149,13 @@ func (r *RabbitMQBroker) shouldDiscardMessage(err error) bool {
 		"payment ID is required",
 		"payment status is required",
 	}
-	
+
 	for _, nonRecoverableError := range nonRecoverableErrors {
 		if strings.Contains(errorMsg, nonRecoverableError) {
 			return true
 		}
 	}
-	
+
 	return false
 }
 

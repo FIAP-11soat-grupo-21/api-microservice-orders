@@ -18,9 +18,9 @@ type PaymentConfirmationMessage struct {
 
 type MessageBroker interface {
 	ConsumePaymentConfirmations(ctx context.Context, handler PaymentConfirmationHandler) error
-	
+
 	SendToKitchen(message map[string]interface{}) error
-	
+
 	Close() error
 }
 
@@ -28,13 +28,13 @@ type PaymentConfirmationHandler func(message PaymentConfirmationMessage) error
 
 type BrokerConfig struct {
 	Type string
-	
+
 	// SQS Config
-	SQSPaymentQueueURL string 
+	SQSPaymentQueueURL string
 	SQSKitchenQueueURL string
 	AWSRegion          string
-	
-	// RabbitMQ 
+
+	// RabbitMQ
 	RabbitMQURL          string
 	RabbitMQPaymentQueue string
 	RabbitMQKitchenQueue string
