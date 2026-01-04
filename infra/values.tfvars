@@ -11,7 +11,7 @@ container_environment_variables = {
   API_HOST : "0.0.0.0"
   AWS_REGION : "us-east-2"
   AWS_DYNAMO_TABLE_NAME : "order-api-table"
-  
+
   MESSAGE_BROKER_TYPE : "sqs"
 }
 

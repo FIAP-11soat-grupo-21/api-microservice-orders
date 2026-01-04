@@ -43,10 +43,10 @@ module "dynamodb_table" {
 module "sqs_kitchen_orders" {
   source = "git::https://github.com/FIAP-11soat-grupo-21/infra-core.git//modules/SQS?ref=main"
 
-  sqs_queue_name                = "${var.application_name}-kitchen-orders"
-  sqs_message_retention_seconds = 86400 # 1 dia
+  sqs_queue_name                 = "${var.application_name}-kitchen-orders"
+  sqs_message_retention_seconds  = 86400 # 1 dia
   sqs_visibility_timeout_seconds = 30
-  sqs_receive_wait_time_seconds = 10
+  sqs_receive_wait_time_seconds  = 10
 
   tags = data.terraform_remote_state.infra.outputs.project_common_tags
 }
@@ -69,9 +69,9 @@ module "order_api" {
     {
       AWS_COGNITO_USER_POOL_ID : module.cognito.user_pool_id,
       AWS_COGNITO_USER_POOL_CLIENT_ID : module.cognito.user_pool_client_id,
-      
+
       SQS_PAYMENT_QUEUE_URL : data.terraform_remote_state.kitchen_order.outputs.sqs_queue_url,
-      SQS_KITCHEN_QUEUE_URL : module.sqs_kitchen_orders.sqs_queue_url,      
+      SQS_KITCHEN_QUEUE_URL : module.sqs_kitchen_orders.sqs_queue_url,
   })
 
   private_subnet_ids      = data.terraform_remote_state.infra.outputs.private_subnet_id
