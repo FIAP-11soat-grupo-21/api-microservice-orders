@@ -40,17 +40,6 @@ module "dynamodb_table" {
   range_key = var.dynamodb_range_keys
 }
 
-module "sqs_kitchen_orders" {
-  source = "git::https://github.com/FIAP-11soat-grupo-21/infra-core.git//modules/SQS?ref=main"
-
-  queue_name                 = "${var.application_name}-kitchen-orders"
-  message_retention_seconds  = 86400 # 1 dia
-  visibility_timeout_seconds = 30
-  receive_wait_time_seconds  = 10
-
-  project_common_tags = data.terraform_remote_state.infra.outputs.project_common_tags
-}
-
 module "order_api" {
   source = "git::https://github.com/FIAP-11soat-grupo-21/infra-core.git//modules/ECS-Service?ref=main"
 
@@ -70,7 +59,7 @@ module "order_api" {
       AWS_COGNITO_USER_POOL_ID : module.cognito.user_pool_id,
       AWS_COGNITO_USER_POOL_CLIENT_ID : module.cognito.user_pool_client_id,
 
-      # SQS_PAYMENT_QUEUE_URL : data.terraform_remote_state.kitchen_order_api.outputs.sqs_queue_url, Temporary Disabled
+      # SQS_PAYMENT_QUEUE_URL : module.sqs_kitchen_orders.sqs_queue_url,
       SQS_KITCHEN_QUEUE_URL : module.sqs_kitchen_orders.sqs_queue_url,
   })
 
