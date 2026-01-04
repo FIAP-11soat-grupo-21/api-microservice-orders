@@ -1,32 +1,3 @@
-module "cognito" {
-  source = "git::https://github.com/FIAP-11soat-grupo-21/infra-core.git//modules/cognito?ref=main"
-
-  user_pool_name               = var.cognito_user_pool_name
-  allow_admin_create_user_only = var.allow_admin_create_user_only
-  auto_verified_attributes     = var.auto_verified_attributes
-  username_attributes          = var.username_attributes
-  email_required               = var.email_required
-  name_required                = var.name_required
-  generate_secret              = var.generate_secret
-  access_token_validity        = var.access_token_validity
-  id_token_validity            = var.id_token_validity
-  refresh_token_validity       = var.refresh_token_validity
-
-  tags = data.terraform_remote_state.infra.outputs.project_common_tags
-}
-
-module "ALB" {
-  source             = "git::https://github.com/FIAP-11soat-grupo-21/infra-core.git//modules/ALB?ref=main"
-  loadbalancer_name  = var.application_name
-  health_check_path  = var.health_check_path
-  app_port           = var.image_port
-  is_internal        = var.alb_is_internal
-  private_subnet_ids = data.terraform_remote_state.infra.outputs.private_subnet_id
-  vpc_id             = data.terraform_remote_state.infra.outputs.vpc_id
-
-  project_common_tags = data.terraform_remote_state.infra.outputs.project_common_tags
-}
-
 module "order_api" {
   source = "git::https://github.com/FIAP-11soat-grupo-21/infra-core.git//modules/ECS-Service?ref=main"
 
@@ -66,5 +37,26 @@ module "GetOrderAPIRoute" {
   api_id       = data.terraform_remote_state.infra.outputs.api_gateway_id
   alb_proxy_id = aws_apigatewayv2_integration.alb_proxy.id
 
-  endpoints = var.api_endpoints
+  endpoints = {
+    get_order = {
+      route_key  = "GET /orders/{id}"
+      restricted = false
+    },
+    get_all_orders = {
+      route_key  = "GET /orders"
+      restricted = false
+    },
+    create_order = {
+      route_key  = "POST /orders"
+      restricted = false
+    },
+    update_order = {
+      route_key  = "PUT /orders/{id}"
+      restricted = false
+    },
+    delete_order = {
+      route_key  = "DELETE /orders/{id}"
+      restricted = false
+    }
+  }
 }

@@ -1,14 +1,14 @@
 application_name = "order-api"
 image_name       = "GHCR_IMAGE_TAG"
-image_port       = 8081
-app_path_pattern = ["/order*"]
+image_port       = 8083
+app_path_pattern = ["/orders*", "/orders/*"]
 
 # =======================================================
 # Configurações do ECS Service
 # =======================================================
 container_environment_variables = {
   GO_ENV : "production"
-  API_PORT : "8082"
+  API_PORT : "8083  "
   API_HOST : "0.0.0.0"
   AWS_REGION : "us-east-2"
   AWS_DYNAMO_TABLE_NAME : "order-api-table"
@@ -35,30 +35,6 @@ apigw_payload_format_version = "1.0"
 apigw_connection_type        = "VPC_LINK"
 
 authorization_name = "CognitoAuthorizer"
-
-# Definição dos endpoints da API
-api_endpoints = {
-  get_order = {
-    route_key  = "GET /orders/{id}"
-    restricted = false
-  },
-  get_all_orders = {
-    route_key  = "GET /orders"
-    restricted = false
-  },
-  create_order = {
-    route_key  = "POST /orders"
-    restricted = false
-  },
-  update_order = {
-    route_key  = "PUT /orders/{id}"
-    restricted = false
-  },
-  delete_order = {
-    route_key  = "DELETE /orders/{id}"
-    restricted = false
-  }
-}
 
 # =======================================================
 # Configurações do dynamoDB
