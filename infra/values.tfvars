@@ -8,7 +8,7 @@ app_path_pattern = ["/orders*", "/orders/*"]
 # =======================================================
 container_environment_variables = {
   GO_ENV : "production"
-  API_PORT : "8083  "
+  API_PORT : "8083"
   API_HOST : "0.0.0.0"
   AWS_REGION : "us-east-2"
   AWS_DYNAMO_TABLE_NAME : "order-api-table"
@@ -26,9 +26,8 @@ task_role_policy_arns = [
 alb_is_internal = true
 
 # =======================================================
-# Configurações do API Gateaway
+# Configurações do API Gateway
 # =======================================================
-# API Gateway
 apigw_integration_type       = "HTTP_PROXY"
 apigw_integration_method     = "ANY"
 apigw_payload_format_version = "1.0"
