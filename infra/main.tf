@@ -14,8 +14,9 @@ module "order_api" {
 
   ecs_container_environment_variables = merge(var.container_environment_variables,
     {
-      AWS_COGNITO_USER_POOL_ID : module.cognito.user_pool_id,
-      AWS_COGNITO_USER_POOL_CLIENT_ID : module.cognito.user_pool_client_id,
+      AWS_COGNITO_USER_POOL_ID : data.terraform_remote_state.infra.outputs.cognito_user_pool_id
+      AWS_COGNITO_USER_POOL_CLIENT_ID : data.terraform_remote_state.infra.outputs.cognito_user_pool_client_id
+      USER_PASSWORD_AUTH : data.terraform_remote_state.infra.outputs.cognito_user_pool_client_secret
 
       # SQS_PAYMENT_QUEUE_URL : data.terraform_remote_state.kitchen_order_api.outputs.sqs_queue_url,
       SQS_KITCHEN_QUEUE_URL : data.terraform_remote_state.kitchen_order_api.outputs.sqs_queue_url,
@@ -24,8 +25,8 @@ module "order_api" {
   private_subnet_ids      = data.terraform_remote_state.infra.outputs.private_subnet_id
   task_execution_role_arn = data.terraform_remote_state.infra.outputs.ecs_task_execution_role_arn
   task_role_policy_arns   = var.task_role_policy_arns
-  alb_target_group_arn    = module.ALB.target_group_arn
-  alb_security_group_id   = module.ALB.alb_security_group_id
+  alb_target_group_arn    = data.terraform_remote_state.infra.outputs.alb_target_group_arn
+  alb_security_group_id   = data.terraform_remote_state.infra.outputs.alb_security_group_id
 
   project_common_tags = data.terraform_remote_state.infra.outputs.project_common_tags
 }
