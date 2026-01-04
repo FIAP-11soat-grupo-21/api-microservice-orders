@@ -22,18 +22,31 @@ type Config struct {
 		Password      string
 	}
 
-	RabbitMQ struct {
-		Host         string
-		Port         string
-		User         string
-		Password     string
-		PaymentQueue string
+	MessageBroker struct {
+		Type string // "sqs" ou "rabbitmq"
+		
+		// SQS
+		SQS struct {
+			PaymentQueueURL string 
+			KitchenQueueURL string 
+			AWSRegion       string
+		}
+		
+		// RabbitMQ
+		RabbitMQ struct {
+			URL          string // (ex: amqp://user:pass@host:port/)
+			PaymentQueue string
+			KitchenQueue string
+		}
 	}
 }
 
-func getEnv(key string) string {
+func getEnv(key string, defaultValue ...string) string {
 	value := os.Getenv(key)
 	if value == "" {
+		if len(defaultValue) > 0 {
+			return defaultValue[0]
+		}
 		log.Fatalf("Environment variable %s is not set", key)
 	}
 	return value
@@ -69,11 +82,18 @@ func (c *Config) Load() *Config {
 	c.Database.Username = getEnv("DB_USERNAME")
 	c.Database.Password = getEnv("DB_PASSWORD")
 
-	c.RabbitMQ.Host = getEnv("RABBITMQ_HOST")
-	c.RabbitMQ.Port = getEnv("RABBITMQ_PORT")
-	c.RabbitMQ.User = getEnv("RABBITMQ_USER")
-	c.RabbitMQ.Password = getEnv("RABBITMQ_PASSWORD")
-	c.RabbitMQ.PaymentQueue = getEnv("RABBITMQ_PAYMENT_QUEUE")
+	// Message Broker Configuration
+	c.MessageBroker.Type = getEnv("MESSAGE_BROKER_TYPE", "sqs")
+	
+	// SQS
+	c.MessageBroker.SQS.PaymentQueueURL = getEnv("SQS_PAYMENT_QUEUE_URL", "")
+	c.MessageBroker.SQS.KitchenQueueURL = getEnv("SQS_KITCHEN_QUEUE_URL", "")
+	c.MessageBroker.SQS.AWSRegion = getEnv("AWS_REGION", "us-east-2")
+	
+	// RabbitMQ
+	c.MessageBroker.RabbitMQ.URL = getEnv("RABBITMQ_URL", "amqp://guest:guest@localhost:5672/")
+	c.MessageBroker.RabbitMQ.PaymentQueue = getEnv("RABBITMQ_PAYMENT_QUEUE", "payment.confirmation")
+	c.MessageBroker.RabbitMQ.KitchenQueue = getEnv("RABBITMQ_KITCHEN_QUEUE", "kitchen.orders")
 
 	return c
 }

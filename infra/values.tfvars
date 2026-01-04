@@ -11,11 +11,16 @@ container_environment_variables = {
   API_HOST : "0.0.0.0"
   AWS_REGION : "us-east-2"
   AWS_DYNAMO_TABLE_NAME : "order-api-table"
+  
+  MESSAGE_BROKER_TYPE : "sqs"
 }
 
 container_secrets = {}
 health_check_path = "/health"
-task_role_policy_arns = []
+task_role_policy_arns = [
+  "arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess",
+  "arn:aws:iam::aws:policy/AmazonSQSFullAccess"
+]
 alb_is_internal = true
 
 # =======================================================

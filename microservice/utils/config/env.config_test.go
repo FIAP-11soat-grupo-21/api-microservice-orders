@@ -109,8 +109,8 @@ func TestConfig_Load_WithEnvVars(t *testing.T) {
 	if cfg.Database.Name != "testdb" {
 		t.Errorf("Load() Database.Name = %v, want testdb", cfg.Database.Name)
 	}
-	if cfg.RabbitMQ.Host != "localhost" {
-		t.Errorf("Load() RabbitMQ.Host = %v, want localhost", cfg.RabbitMQ.Host)
+	if cfg.MessageBroker.RabbitMQ.URL != "amqp://guest:guest@localhost:5672/" {
+		t.Errorf("Load() MessageBroker.RabbitMQ.URL = %v, want amqp://guest:guest@localhost:5672/", cfg.MessageBroker.RabbitMQ.URL)
 	}
 }
 
@@ -125,10 +125,7 @@ func TestConfig_Load_MigrationsDisabled(t *testing.T) {
 		"DB_PORT":               "5432",
 		"DB_USERNAME":           "user",
 		"DB_PASSWORD":           "pass",
-		"RABBITMQ_HOST":         "localhost",
-		"RABBITMQ_PORT":         "5672",
-		"RABBITMQ_USER":         "guest",
-		"RABBITMQ_PASSWORD":     "guest",
+		"RABBITMQ_URL":          "amqp://guest:guest@localhost:5672/",
 		"RABBITMQ_PAYMENT_QUEUE": "payments",
 	}
 
