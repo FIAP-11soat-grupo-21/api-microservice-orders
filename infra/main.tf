@@ -59,8 +59,8 @@ module "order_api" {
       AWS_COGNITO_USER_POOL_ID : module.cognito.user_pool_id,
       AWS_COGNITO_USER_POOL_CLIENT_ID : module.cognito.user_pool_client_id,
 
-      # SQS_PAYMENT_QUEUE_URL : module.sqs_kitchen_orders.sqs_queue_url,
-      SQS_KITCHEN_QUEUE_URL : module.sqs_kitchen_orders.sqs_queue_url,
+      # SQS_PAYMENT_QUEUE_URL : data.terraform_remote_state.kitchen_order_api.outputs.sqs_queue_url,
+      SQS_KITCHEN_QUEUE_URL : data.terraform_remote_state.kitchen_order_api.outputs.sqs_queue_url,
   })
 
   private_subnet_ids      = data.terraform_remote_state.infra.outputs.private_subnet_id
