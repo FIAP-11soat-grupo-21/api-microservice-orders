@@ -21,8 +21,8 @@ module "order_api" {
       # Database configuration
       DB_HOST : module.app_db.db_connection
 
-      # SQS_PAYMENT_QUEUE_URL : data.terraform_remote_state.kitchen_order_api.outputs.sqs_queue_url,
-      SQS_KITCHEN_QUEUE_URL : data.terraform_remote_state.kitchen_order_api.outputs.sqs_queue_url,
+      # SQS_PAYMENT_QUEUE_URL : try(data.terraform_remote_state.payment_api.outputs.sqs_queue_url, "")
+      SQS_KITCHEN_QUEUE_URL : try(data.terraform_remote_state.kitchen_order_api.outputs.sqs_queue_url, "")
   })
   ecs_container_secrets = merge(var.container_secrets,
     {

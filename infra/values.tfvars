@@ -17,6 +17,9 @@ container_environment_variables = {
   DB_PORT : "5432"
   DB_USERNAME : "appuser"
 
+  AWS_ACCESS_KEY_ID : "VALUE"
+  AWS_SECRET_ACCESS_KEY : "VALUE"
+
   MESSAGE_BROKER_TYPE : "sqs"
 }
 
