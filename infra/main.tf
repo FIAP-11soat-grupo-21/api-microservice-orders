@@ -18,8 +18,15 @@ module "order_api" {
       AWS_COGNITO_USER_POOL_CLIENT_ID : data.terraform_remote_state.infra.outputs.cognito_user_pool_client_id
       USER_PASSWORD_AUTH : data.terraform_remote_state.infra.outputs.cognito_user_pool_client_secret
 
+      # Database configuration
+      DB_HOST : module.app_db.db_connection
+
       # SQS_PAYMENT_QUEUE_URL : data.terraform_remote_state.kitchen_order_api.outputs.sqs_queue_url,
       SQS_KITCHEN_QUEUE_URL : data.terraform_remote_state.kitchen_order_api.outputs.sqs_queue_url,
+  })
+  ecs_container_secrets = merge(var.container_secrets,
+    {
+      DB_PASSWORD : module.app_db.db_secret_password_arn
   })
 
   private_subnet_ids      = data.terraform_remote_state.infra.outputs.private_subnet_id

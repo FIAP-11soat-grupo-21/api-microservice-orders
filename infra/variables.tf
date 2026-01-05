@@ -50,47 +50,6 @@ variable "alb_is_internal" {
 }
 
 #########################################################
-################# Variáveis do DynamoDB #################
-#########################################################
-
-variable "dynamodb_secondary_indexes" {
-  description = "Lista de índices secundários para a tabela DynamoDB"
-  type = list(object({
-    name            = string
-    hash_key        = string
-    range_key       = string
-    projection_type = string
-  }))
-}
-
-variable "dynamodb_hash_key" {
-  description = "Hash key da tabela DynamoDB"
-  type        = string
-  default     = "id"
-}
-
-variable "dynamodb_hash_key_type" {
-  description = "Tipo da hash key da tabela DynamoDB"
-  type        = string
-  default     = "S"
-}
-
-variable "dynamodb_billing_mode" {
-  description = "Billing mode da tabela DynamoDB"
-  type        = string
-  default     = "PAY_PER_REQUEST"
-}
-
-variable "dynamodb_range_keys" {
-  description = "Lista de range keys (nome, tipo) para a tabela DynamoDB"
-  type = list(object({
-    name = string
-    type = string
-  }))
-  default = []
-}
-
-#########################################################
 ############### Variáveis do API Gateway ################
 #########################################################
 

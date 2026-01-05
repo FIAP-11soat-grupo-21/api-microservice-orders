@@ -1,6 +1,11 @@
-output "dynamodb_table_name" {
-  description = "Nome da tabela DynamoDB do Orders"
-  value       = module.dynamodb_table.table_name
+output "db_address" {
+  description = "Endereço do banco de dados RDS do Orders"
+  value       = module.app_db.db_connection
+}
+
+output "db_secret_arn" {
+  description = "ARN do segredo do banco de dados RDS do Orders"
+  value       = module.app_db.db_secret_password_arn
 }
 
 output "ecs_service_id" {
