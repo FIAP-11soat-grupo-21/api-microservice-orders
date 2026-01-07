@@ -15,10 +15,7 @@ container_environment_variables = {
   DB_RUN_MIGRATIONS : "true"
   DB_NAME : "postgres"
   DB_PORT : "5432"
-  DB_USERNAME : "appuser"
-
-  AWS_ACCESS_KEY_ID : "VALUE"
-  AWS_SECRET_ACCESS_KEY : "VALUE"
+  DB_USERNAME : "adminuser"
 
   MESSAGE_BROKER_TYPE : "sqs"
 }
