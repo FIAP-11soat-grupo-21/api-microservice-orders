@@ -12,7 +12,7 @@ import (
 	identityUtils "microservice/utils/identity"
 )
 
-const INITIAL_ORDER_STATUS_ID = "56d3b3c3-1801-49cd-bae7-972c78082001"
+const INITIAL_ORDER_STATUS_ID = "56d3b3c3-1801-49cd-bae7-972c78082012"
 
 type CreateOrderUseCase struct {
 	orderGateway       gateways.OrderGateway

@@ -11,6 +11,7 @@ import (
 	"gorm.io/gorm/logger"
 
 	"microservice/infra/db/postgres/models"
+	"microservice/infra/db/postgres/seed"
 	"microservice/utils/config"
 )
 
@@ -100,5 +101,12 @@ func RunMigrations() {
 		&models.OrderStatusModel{},
 	); err != nil {
 		log.Printf("Error running migrations: %v", err)
+		return
 	}
+
+	log.Println("Migrations completed successfully")
+	
+	log.Println("Running seeds...")
+	seed.SeedOrderStatus(dbConnection)
+	log.Println("Seeds completed successfully")
 }
