@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"microservice/infra/api/rest/schemas"
+	"microservice/infra/messaging"
 	"microservice/internal/adapters/controllers"
 	"microservice/internal/adapters/dtos"
 	"microservice/utils/factories"
@@ -20,7 +21,8 @@ type OrderHandler struct {
 func NewOrderHandler() *OrderHandler {
 	orderDataSource := factories.NewOrderDataSource()
 	orderStatusDataSource := factories.NewOrderStatusDataSource()
-	controller := controllers.NewOrderController(orderDataSource, orderStatusDataSource)
+	broker := messaging.GetBroker()
+	controller := controllers.NewOrderController(orderDataSource, orderStatusDataSource, broker)
 
 	return &OrderHandler{
 		controller: controller,

@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"microservice/internal/adapters/brokers"
 	"microservice/internal/adapters/dtos"
 	"microservice/internal/adapters/gateways"
 	"microservice/internal/adapters/presenters"
@@ -13,19 +14,21 @@ type OrderController struct {
 	orderStatusDataSource interfaces.IOrderStatusDataSource
 	orderGateway          gateways.OrderGateway
 	orderStatusGateway    gateways.OrderStatusGateway
+	messageBroker         brokers.MessageBroker
 }
 
-func NewOrderController(orderDataSource interfaces.IOrderDataSource, orderStatusDataSource interfaces.IOrderStatusDataSource) *OrderController {
+func NewOrderController(orderDataSource interfaces.IOrderDataSource, orderStatusDataSource interfaces.IOrderStatusDataSource, messageBroker brokers.MessageBroker) *OrderController {
 	return &OrderController{
 		orderDataSource:       orderDataSource,
 		orderStatusDataSource: orderStatusDataSource,
 		orderGateway:          *gateways.NewOrderGateway(orderDataSource),
 		orderStatusGateway:    *gateways.NewOrderStatusGateway(orderStatusDataSource),
+		messageBroker:         messageBroker,
 	}
 }
 
 func (c *OrderController) Create(dto dtos.CreateOrderDTO) (dtos.OrderResponseDTO, error) {
-	useCase := use_cases.NewCreateOrderUseCase(c.orderGateway, c.orderStatusGateway)
+	useCase := use_cases.NewCreateOrderUseCase(c.orderGateway, c.orderStatusGateway, c.messageBroker)
 	order, err := useCase.Execute(dto.CustomerID, dto.Items)
 	if err != nil {
 		return dtos.OrderResponseDTO{}, err

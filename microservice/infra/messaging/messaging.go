@@ -45,6 +45,10 @@ func Connect() error {
 	return nil
 }
 
+func GetBroker() brokers.MessageBroker {
+	return broker
+}
+
 func SetupPaymentConsumer(processPaymentUC *use_cases.ProcessPaymentConfirmationUseCase) error {
 	if broker == nil {
 		return fmt.Errorf("broker not connected, call Connect() first")
