@@ -1,7 +1,7 @@
 application_name = "order-api"
 image_name       = "GHCR_IMAGE_TAG"
 image_port       = 8083
-app_path_pattern = ["/orders*", "/orders/*", "/v1/orders/*"]
+app_path_pattern = ["/v1/orders/*"]
 
 # =======================================================
 # Configurações do ECS Service
