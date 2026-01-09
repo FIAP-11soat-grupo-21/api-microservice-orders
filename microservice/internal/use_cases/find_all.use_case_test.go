@@ -126,7 +126,7 @@ func TestFindAllOrdersUseCase_Execute_Success(t *testing.T) {
 	status, _ := entities.NewOrderStatus("pending", "Pending")
 	order1, _ := entities.NewOrderWithItems("order-1", &customerID, 25.0, *status, []entities.OrderItem{}, time.Now(), nil)
 	order2, _ := entities.NewOrderWithItems("order-2", &customerID, 35.0, *status, []entities.OrderItem{}, time.Now(), nil)
-	
+
 	mockGateway.AddOrder(order1)
 	mockGateway.AddOrder(order2)
 
@@ -167,7 +167,7 @@ func TestFindAllOrdersUseCase_Execute_WithFilter(t *testing.T) {
 	statusID := "pending"
 	status, _ := entities.NewOrderStatus(statusID, "Pending")
 	order, _ := entities.NewOrderWithItems("order-1", &customerID, 25.0, *status, []entities.OrderItem{}, time.Now(), nil)
-	
+
 	mockGateway.AddOrder(order)
 
 	filter := dtos.OrderFilterDTO{

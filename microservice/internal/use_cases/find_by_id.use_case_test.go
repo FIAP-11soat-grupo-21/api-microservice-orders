@@ -149,7 +149,7 @@ func TestFindOrderByIDUseCase_Execute_OrderNotFound(t *testing.T) {
 	uc := NewFindOrderByIDUseCase(mockGateway)
 
 	validID := "550e8400-e29b-41d4-a716-446655440000"
-	
+
 	order, err := uc.Execute(validID)
 	if err == nil {
 		t.Error("Expected error when order not found")
@@ -170,7 +170,7 @@ func TestFindOrderByIDUseCase_Execute_GatewayError(t *testing.T) {
 	uc := NewFindOrderByIDUseCase(mockGateway)
 
 	validID := "550e8400-e29b-41d4-a716-446655440000"
-	
+
 	order, err := uc.Execute(validID)
 	if err == nil {
 		t.Error("Expected error when gateway fails")

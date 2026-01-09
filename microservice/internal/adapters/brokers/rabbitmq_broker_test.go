@@ -66,11 +66,11 @@ func TestNewRabbitMQBroker_EmptyOrdersQueue(t *testing.T) {
 
 func TestBrokerConfig_Structure(t *testing.T) {
 	config := BrokerConfig{
-		Type:              "rabbitmq",
-		RabbitMQURL:       "amqp://localhost:5672",
+		Type:                "rabbitmq",
+		RabbitMQURL:         "amqp://localhost:5672",
 		RabbitMQOrdersQueue: "orders-queue",
-		SQSOrdersQueueURL: "https://sqs.amazonaws.com/orders",
-		AWSRegion:         "us-east-1",
+		SQSOrdersQueueURL:   "https://sqs.amazonaws.com/orders",
+		AWSRegion:           "us-east-1",
 	}
 
 	assert.Equal(t, "rabbitmq", config.Type)
@@ -209,7 +209,7 @@ func TestRabbitMQBroker_processOrderUpdateMessage_ValidJSON(t *testing.T) {
 	mockDelivery := amqp.Delivery{
 		Body: []byte(validJSON),
 	}
-	
+
 	handlerCalled := false
 	handler := func(message OrderUpdateMessage) error {
 		handlerCalled = true
@@ -231,7 +231,7 @@ func TestRabbitMQBroker_processOrderUpdateMessage_InvalidJSON(t *testing.T) {
 	mockDelivery := amqp.Delivery{
 		Body: []byte(invalidJSON),
 	}
-	
+
 	handler := func(message OrderUpdateMessage) error {
 		t.Error("Handler should not be called for invalid JSON")
 		return nil
@@ -249,7 +249,7 @@ func TestRabbitMQBroker_processOrderUpdateMessage_HandlerError(t *testing.T) {
 	mockDelivery := amqp.Delivery{
 		Body: []byte(validJSON),
 	}
-	
+
 	expectedError := errors.New("handler error")
 	handler := func(message OrderUpdateMessage) error {
 		return expectedError
@@ -294,7 +294,7 @@ func TestRabbitMQBroker_ConsumeOrderUpdates_ContextCancellation(t *testing.T) {
 
 	// Test context cancellation
 	ctx, cancel := context.WithCancel(context.Background())
-	
+
 	handler := func(message OrderUpdateMessage) error {
 		return nil
 	}
@@ -350,4 +350,3 @@ func TestRabbitMQBroker_Close_WithValidChannel(t *testing.T) {
 	err = broker.Close()
 	assert.NoError(t, err)
 }
-

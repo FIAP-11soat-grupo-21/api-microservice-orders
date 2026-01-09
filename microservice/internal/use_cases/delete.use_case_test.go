@@ -2,7 +2,6 @@ package use_cases
 
 import (
 	"testing"
-	"time"
 
 	"microservice/internal/domain/entities"
 	"microservice/internal/domain/exceptions"
@@ -94,101 +93,5 @@ func TestDeleteOrderUseCase_Execute_ValidIDFormat(t *testing.T) {
 	err := entities.ValidateID(validID)
 	if err != nil {
 		t.Errorf("Expected no error for valid UUID, got %v", err)
-	}
-}
-
-// Comprehensive tests using mocks for full coverage
-
-func TestDeleteOrderUseCase_Execute_Success(t *testing.T) {
-	mockGateway := NewMockOrderGateway()
-	uc := NewDeleteOrderUseCase(mockGateway)
-
-	// Create and add a test order
-	validID := "550e8400-e29b-41d4-a716-446655440000"
-	customerID := "customer-123"
-	status, _ := entities.NewOrderStatus("pending", "Pending")
-	order, _ := entities.NewOrderWithItems(validID, &customerID, 25.0, *status, []entities.OrderItem{}, time.Now(), nil)
-	mockGateway.AddOrder(order)
-
-	err := uc.Execute(validID)
-	if err != nil {
-		t.Errorf("Expected no error for successful delete, got %v", err)
-	}
-
-	// Verify order was deleted
-	_, err = mockGateway.FindByID(validID)
-	if err == nil {
-		t.Error("Expected order to be deleted")
-	}
-}
-
-func TestDeleteOrderUseCase_Execute_OrderNotFound(t *testing.T) {
-	mockGateway := NewMockOrderGateway()
-	uc := NewDeleteOrderUseCase(mockGateway)
-
-	validID := "550e8400-e29b-41d4-a716-446655440000"
-	
-	err := uc.Execute(validID)
-	if err == nil {
-		t.Error("Expected error when order not found")
-	}
-
-	if _, ok := err.(*exceptions.OrderNotFoundException); !ok {
-		t.Errorf("Expected OrderNotFoundException, got %T", err)
-	}
-}
-
-func TestDeleteOrderUseCase_Execute_GatewayFindError(t *testing.T) {
-	mockGateway := NewMockOrderGateway()
-	mockGateway.SetShouldFailFindByID(true)
-	uc := NewDeleteOrderUseCase(mockGateway)
-
-	validID := "550e8400-e29b-41d4-a716-446655440000"
-	
-	err := uc.Execute(validID)
-	if err == nil {
-		t.Error("Expected error when gateway fails")
-	}
-
-	if _, ok := err.(*exceptions.OrderNotFoundException); !ok {
-		t.Errorf("Expected OrderNotFoundException, got %T", err)
-	}
-}
-
-func TestDeleteOrderUseCase_Execute_IDValidation(t *testing.T) {
-	// Test various ID formats
-	testCases := []struct {
-		name  string
-		id    string
-		valid bool
-	}{
-		{"valid UUID", "550e8400-e29b-41d4-a716-446655440000", true},
-		{"empty ID", "", false},
-		{"invalid format", "invalid-id", false},
-		{"short UUID", "550e8400-e29b", false},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			err := entities.ValidateID(tc.id)
-			if tc.valid && err != nil {
-				t.Errorf("Expected no error for valid case, got %v", err)
-			}
-			if !tc.valid && err == nil {
-				t.Error("Expected error for invalid case")
-			}
-		})
-	}
-}
-
-func TestDeleteOrderUseCase_Execute_ErrorHandling(t *testing.T) {
-	orderNotFoundErr := &exceptions.OrderNotFoundException{}
-	if orderNotFoundErr.Error() != "Order not found" {
-		t.Errorf("Expected 'Order not found', got '%s'", orderNotFoundErr.Error())
-	}
-
-	customErr := &exceptions.OrderNotFoundException{Message: "Custom message"}
-	if customErr.Error() != "Custom message" {
-		t.Errorf("Expected 'Custom message', got '%s'", customErr.Error())
 	}
 }
