@@ -105,7 +105,7 @@ func RunMigrations() {
 	}
 
 	log.Println("Migrations completed successfully")
-	
+
 	log.Println("Running seeds...")
 	seed.SeedOrderStatus(dbConnection)
 	log.Println("Seeds completed successfully")

@@ -21,7 +21,7 @@ func TestConnect_Simple(t *testing.T) {
 	os.Setenv("SQS_PAYMENT_QUEUE_URL", "https://sqs.us-east-1.amazonaws.com/123456789012/payment")
 	os.Setenv("SQS_KITCHEN_QUEUE_URL", "https://sqs.us-east-1.amazonaws.com/123456789012/kitchen")
 	os.Setenv("AWS_REGION", "us-east-1")
-	
+
 	defer func() {
 		os.Unsetenv("GO_ENV")
 		os.Unsetenv("API_PORT")

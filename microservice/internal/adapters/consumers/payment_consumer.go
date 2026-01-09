@@ -12,13 +12,13 @@ import (
 
 type PaymentConsumer struct {
 	broker           brokers.MessageBroker
-	processPaymentUC *use_cases.ProcessPaymentConfirmationUseCase
+	processPaymentUC IProcessPaymentConfirmationUseCase
 	kitchenBroker    brokers.MessageBroker
 }
 
 func NewPaymentConsumer(
 	broker brokers.MessageBroker,
-	processPaymentUC *use_cases.ProcessPaymentConfirmationUseCase,
+	processPaymentUC IProcessPaymentConfirmationUseCase,
 	kitchenBroker brokers.MessageBroker,
 ) *PaymentConsumer {
 	return &PaymentConsumer{

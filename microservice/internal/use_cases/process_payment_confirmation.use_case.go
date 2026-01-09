@@ -5,19 +5,19 @@ import (
 	"time"
 
 	"microservice/internal/adapters/dtos"
-	"microservice/internal/adapters/gateways"
 	"microservice/internal/domain/entities"
 	"microservice/internal/domain/exceptions"
+	"microservice/internal/interfaces"
 )
 
 type ProcessPaymentConfirmationUseCase struct {
-	orderGateway       *gateways.OrderGateway
-	orderStatusGateway *gateways.OrderStatusGateway
+	orderGateway       interfaces.IOrderGateway
+	orderStatusGateway interfaces.IOrderStatusGateway
 }
 
 func NewProcessPaymentConfirmationUseCase(
-	orderGateway *gateways.OrderGateway,
-	orderStatusGateway *gateways.OrderStatusGateway,
+	orderGateway interfaces.IOrderGateway,
+	orderStatusGateway interfaces.IOrderStatusGateway,
 ) *ProcessPaymentConfirmationUseCase {
 	return &ProcessPaymentConfirmationUseCase{
 		orderGateway:       orderGateway,

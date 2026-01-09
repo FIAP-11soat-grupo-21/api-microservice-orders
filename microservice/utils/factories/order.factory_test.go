@@ -131,7 +131,7 @@ func TestNewOrderStatusDataSource_WithMock(t *testing.T) {
 }
 func TestNewOrderDataSource_Default(t *testing.T) {
 	SetNewOrderDataSource(nil)
-	
+
 	ds := NewOrderDataSource()
 	if ds == nil {
 		t.Error("Expected data source to be created")
@@ -140,7 +140,7 @@ func TestNewOrderDataSource_Default(t *testing.T) {
 
 func TestNewOrderStatusDataSource_Default(t *testing.T) {
 	SetNewOrderStatusDataSource(nil)
-	
+
 	ds := NewOrderStatusDataSource()
 	if ds == nil {
 		t.Error("Expected data source to be created")
@@ -152,21 +152,21 @@ func TestSetNewOrderDataSource_CustomFunction(t *testing.T) {
 	defer func() {
 		newOrderDataSource = originalFn
 	}()
-	
+
 	customCalled := false
 	customFn := func() interfaces.IOrderDataSource {
 		customCalled = true
 		return &mockOrderDataSourceCustom{}
 	}
-	
+
 	SetNewOrderDataSource(customFn)
-	
+
 	ds := NewOrderDataSource()
-	
+
 	if !customCalled {
 		t.Error("Expected custom function to be called")
 	}
-	
+
 	if _, ok := ds.(*mockOrderDataSourceCustom); !ok {
 		t.Error("Expected custom data source type")
 	}
@@ -177,21 +177,21 @@ func TestSetNewOrderStatusDataSource_CustomFunction(t *testing.T) {
 	defer func() {
 		newOrderStatusDataSource = originalFn
 	}()
-	
+
 	customCalled := false
 	customFn := func() interfaces.IOrderStatusDataSource {
 		customCalled = true
 		return &mockOrderStatusDataSourceCustom{}
 	}
-	
+
 	SetNewOrderStatusDataSource(customFn)
-	
+
 	ds := NewOrderStatusDataSource()
-	
+
 	if !customCalled {
 		t.Error("Expected custom function to be called")
 	}
-	
+
 	if _, ok := ds.(*mockOrderStatusDataSourceCustom); !ok {
 		t.Error("Expected custom data source type")
 	}

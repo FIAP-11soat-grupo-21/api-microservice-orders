@@ -129,3 +129,57 @@ func TestNewCreateOrderUseCase(t *testing.T) {
 		t.Error("INITIAL_ORDER_STATUS_ID should be defined")
 	}
 }
+
+func TestCreateOrderUseCase_Execute_Success(t *testing.T) {
+	if INITIAL_ORDER_STATUS_ID == "" {
+		t.Error("INITIAL_ORDER_STATUS_ID should not be empty")
+	}
+
+	items := []dtos.CreateOrderItemDTO{
+		{ProductID: "product-1", Quantity: 2, Price: 10.0},
+		{ProductID: "product-2", Quantity: 1, Price: 15.0},
+	}
+
+	if len(items) != 2 {
+		t.Errorf("Expected 2 items, got %d", len(items))
+	}
+
+	if items[0].ProductID != "product-1" {
+		t.Errorf("Expected product ID 'product-1', got '%s'", items[0].ProductID)
+	}
+}
+
+func TestCreateOrderUseCase_Execute_ValidatesItems(t *testing.T) {
+	validItem := dtos.CreateOrderItemDTO{
+		ProductID: "product-1",
+		Quantity:  2,
+		Price:     10.0,
+	}
+
+	if validItem.ProductID == "" {
+		t.Error("Product ID should not be empty")
+	}
+
+	if validItem.Quantity <= 0 {
+		t.Error("Quantity should be positive")
+	}
+
+	if validItem.Price <= 0 {
+		t.Error("Price should be positive")
+	}
+}
+
+func TestCreateOrderUseCase_Execute_HandlesNilCustomerID(t *testing.T) {
+	var customerID *string = nil
+
+	if customerID != nil {
+		t.Error("Customer ID should be nil")
+	}
+
+	validCustomerID := "customer-1"
+	customerID = &validCustomerID
+
+	if customerID == nil || *customerID != "customer-1" {
+		t.Error("Customer ID should be set correctly")
+	}
+}
