@@ -129,3 +129,102 @@ func TestNewOrderStatusDataSource_WithMock(t *testing.T) {
 		t.Error("NewOrderStatusDataSource() did not return the mock")
 	}
 }
+func TestNewOrderDataSource_Default(t *testing.T) {
+	SetNewOrderDataSource(nil)
+	
+	ds := NewOrderDataSource()
+	if ds == nil {
+		t.Error("Expected data source to be created")
+	}
+}
+
+func TestNewOrderStatusDataSource_Default(t *testing.T) {
+	SetNewOrderStatusDataSource(nil)
+	
+	ds := NewOrderStatusDataSource()
+	if ds == nil {
+		t.Error("Expected data source to be created")
+	}
+}
+
+func TestSetNewOrderDataSource_CustomFunction(t *testing.T) {
+	originalFn := newOrderDataSource
+	defer func() {
+		newOrderDataSource = originalFn
+	}()
+	
+	customCalled := false
+	customFn := func() interfaces.IOrderDataSource {
+		customCalled = true
+		return &mockOrderDataSourceCustom{}
+	}
+	
+	SetNewOrderDataSource(customFn)
+	
+	ds := NewOrderDataSource()
+	
+	if !customCalled {
+		t.Error("Expected custom function to be called")
+	}
+	
+	if _, ok := ds.(*mockOrderDataSourceCustom); !ok {
+		t.Error("Expected custom data source type")
+	}
+}
+
+func TestSetNewOrderStatusDataSource_CustomFunction(t *testing.T) {
+	originalFn := newOrderStatusDataSource
+	defer func() {
+		newOrderStatusDataSource = originalFn
+	}()
+	
+	customCalled := false
+	customFn := func() interfaces.IOrderStatusDataSource {
+		customCalled = true
+		return &mockOrderStatusDataSourceCustom{}
+	}
+	
+	SetNewOrderStatusDataSource(customFn)
+	
+	ds := NewOrderStatusDataSource()
+	
+	if !customCalled {
+		t.Error("Expected custom function to be called")
+	}
+	
+	if _, ok := ds.(*mockOrderStatusDataSourceCustom); !ok {
+		t.Error("Expected custom data source type")
+	}
+}
+
+type mockOrderDataSourceCustom struct{}
+
+func (m *mockOrderDataSourceCustom) Create(order daos.OrderDAO) error {
+	return nil
+}
+
+func (m *mockOrderDataSourceCustom) FindAll(filter dtos.OrderFilterDTO) ([]daos.OrderDAO, error) {
+	return nil, nil
+}
+
+func (m *mockOrderDataSourceCustom) FindByID(id string) (daos.OrderDAO, error) {
+	return daos.OrderDAO{}, nil
+}
+
+func (m *mockOrderDataSourceCustom) Update(order daos.OrderDAO) error {
+	return nil
+}
+
+func (m *mockOrderDataSourceCustom) Delete(id string) error {
+	return nil
+}
+
+type mockOrderStatusDataSourceCustom struct{}
+
+func (m *mockOrderStatusDataSourceCustom) FindAll() ([]daos.OrderStatusDAO, error) {
+	return nil, nil
+}
+
+func (m *mockOrderStatusDataSourceCustom) FindByID(id string) (daos.OrderStatusDAO, error) {
+	return daos.OrderStatusDAO{}, nil
+}

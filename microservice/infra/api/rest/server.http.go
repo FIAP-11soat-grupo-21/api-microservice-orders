@@ -11,6 +11,7 @@ import (
 	"microservice/infra/db/postgres"
 	"microservice/infra/messaging"
 	"microservice/utils/config"
+	"microservice/utils/factories"
 )
 
 func NewRouter() *gin.Engine {
@@ -46,13 +47,17 @@ func Init() {
 
 	err := messaging.Connect()
 	if err != nil {
-		log.Printf("Warning: Failed to connect to RabbitMQ: %v", err)
+		log.Printf("Warning: Failed to connect to message broker: %v", err)
 		log.Println("The application will continue without message queue support")
 	} else {
-		paymentConsumer := messaging.NewPaymentEventConsumer()
-		err = paymentConsumer.Start()
+		log.Println("Message broker connected successfully")
+
+		processPaymentUseCase := factories.NewProcessPaymentConfirmationUseCase()
+		err = messaging.SetupPaymentConsumer(processPaymentUseCase)
 		if err != nil {
-			log.Printf("Warning: Failed to start payment consumer: %v", err)
+			log.Printf("Warning: Failed to setup payment consumer: %v", err)
+		} else {
+			log.Println("Payment consumer started successfully")
 		}
 	}
 

@@ -12,6 +12,8 @@ bin/
 # Output of the go coverage tool
 *.out
 coverage.html
+coverage_*.html
+coverage_*.out
 
 # Dependency directories
 vendor/
@@ -31,3 +33,7 @@ tmp/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Development scripts (if any)
+scripts/dev_*
+scripts/test_*

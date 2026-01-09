@@ -3,6 +3,7 @@ package use_cases
 import (
 	"testing"
 
+	"microservice/internal/adapters/gateways"
 	"microservice/internal/domain/entities"
 	"microservice/internal/domain/exceptions"
 )
@@ -54,4 +55,44 @@ func TestDeleteOrderUseCase_OrderNotFoundExceptionCustomMessage(t *testing.T) {
 
 func TestNewDeleteOrderUseCase(t *testing.T) {
 	_ = NewDeleteOrderUseCase
+}
+func TestDeleteOrderUseCase_NewDeleteOrderUseCase(t *testing.T) {
+	orderGateway := gateways.OrderGateway{}
+	uc := NewDeleteOrderUseCase(orderGateway)
+
+	if uc == nil {
+		t.Error("Expected use case to be created")
+	}
+}
+
+func TestDeleteOrderUseCase_Execute_InvalidID(t *testing.T) {
+	orderGateway := gateways.OrderGateway{}
+	uc := NewDeleteOrderUseCase(orderGateway)
+
+	err := uc.Execute("invalid-id")
+	if err == nil {
+		t.Error("Expected error for invalid ID")
+	}
+
+	if _, ok := err.(*exceptions.InvalidOrderDataException); !ok {
+		t.Errorf("Expected InvalidOrderDataException, got %T", err)
+	}
+}
+
+func TestDeleteOrderUseCase_Execute_EmptyID(t *testing.T) {
+	orderGateway := gateways.OrderGateway{}
+	uc := NewDeleteOrderUseCase(orderGateway)
+
+	err := uc.Execute("")
+	if err == nil {
+		t.Error("Expected error for empty ID")
+	}
+}
+
+func TestDeleteOrderUseCase_Execute_ValidIDFormat(t *testing.T) {
+	validID := "550e8400-e29b-41d4-a716-446655440000"
+	err := entities.ValidateID(validID)
+	if err != nil {
+		t.Errorf("Expected no error for valid UUID, got %v", err)
+	}
 }

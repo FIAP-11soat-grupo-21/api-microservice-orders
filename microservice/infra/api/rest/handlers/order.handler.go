@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -8,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"microservice/infra/api/rest/schemas"
+	"microservice/infra/messaging"
 	"microservice/internal/adapters/controllers"
 	"microservice/internal/adapters/dtos"
 	"microservice/utils/factories"
@@ -20,7 +22,13 @@ type OrderHandler struct {
 func NewOrderHandler() *OrderHandler {
 	orderDataSource := factories.NewOrderDataSource()
 	orderStatusDataSource := factories.NewOrderStatusDataSource()
-	controller := controllers.NewOrderController(orderDataSource, orderStatusDataSource)
+	broker := messaging.GetBroker()
+	
+	if broker == nil {
+		log.Println("Warning: Message broker not available, orders will be created without messaging")
+	}
+	
+	controller := controllers.NewOrderController(orderDataSource, orderStatusDataSource, broker)
 
 	return &OrderHandler{
 		controller: controller,

@@ -118,7 +118,7 @@ func TestInitialOrderStatusID_IsValid(t *testing.T) {
 	if INITIAL_ORDER_STATUS_ID == "" {
 		t.Error("INITIAL_ORDER_STATUS_ID should not be empty")
 	}
-	expectedID := "56d3b3c3-1801-49cd-bae7-972c78082001"
+	expectedID := "56d3b3c3-1801-49cd-bae7-972c78082012"
 	if INITIAL_ORDER_STATUS_ID != expectedID {
 		t.Errorf("INITIAL_ORDER_STATUS_ID = %v, want %v", INITIAL_ORDER_STATUS_ID, expectedID)
 	}

@@ -1,26 +1,33 @@
-.PHONY: run build test test-coverage test-coverage-html
+.PHONY: build run test clean dev-up dev-down
 
-# Run the API
-run:
-	go run main.go
-
-# Build the binary
 build:
-	go build -o main.exe .
+	go build -o bin/orders-api .
 
-# Run all tests
+run:
+	go run . -env=.env.local
+
 test:
-	go test ./...
+	go test -v ./...
 
 test-coverage:
-	go test ./internal/... ./utils/identity/... -coverprofile=coverage.out
-	go tool cover -func=coverage.out
-
-test-coverage-html:
-	go test ./internal/... ./utils/identity/... -coverprofile=coverage.out
+	go test -v -coverprofile=coverage.out ./...
 	go tool cover -html=coverage.out -o coverage.html
-	@echo "Coverage report generated: coverage.html"
 
-test-coverage-full:
-	go test ./... -coverprofile=coverage.out
-	go tool cover -func=coverage.out
+clean:
+	rm -rf bin/
+	rm -f coverage.out coverage.html
+
+dev-up:
+	docker-compose -f ../.devcontainer/docker-compose.yml up -d postgres rabbitmq
+
+dev-down:
+	docker-compose -f ../.devcontainer/docker-compose.yml down
+
+dev-logs:
+	docker-compose -f ../.devcontainer/docker-compose.yml logs -f
+
+fmt:
+	go fmt ./...
+
+tidy:
+	go mod tidy
