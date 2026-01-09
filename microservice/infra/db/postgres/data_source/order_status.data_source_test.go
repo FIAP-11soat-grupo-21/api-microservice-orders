@@ -15,7 +15,10 @@ func setupTestDBForStatus() *gorm.DB {
 		panic("failed to connect database")
 	}
 
-	db.AutoMigrate(&models.OrderStatusModel{})
+	err = db.AutoMigrate(&models.OrderStatusModel{})
+	if err != nil {
+		panic("failed to migrate database")
+	}
 
 	statuses := []models.OrderStatusModel{
 		{ID: "status-1", Name: "Pending"},

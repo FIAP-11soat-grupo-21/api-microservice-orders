@@ -11,10 +11,9 @@ import (
 
 func TestGetDB_Singleton(t *testing.T) {
 	originalInstance := instance
-	originalOnce := once
 	defer func() {
 		instance = originalInstance
-		once = originalOnce
+		once = sync.Once{}
 	}()
 
 	testDB, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
@@ -90,6 +89,7 @@ func TestConnect_WithValidConfig(t *testing.T) {
 
 	defer func() {
 		if r := recover(); r != nil {
+			t.Log("Expected panic occurred during database connection test")
 		}
 	}()
 

@@ -30,10 +30,6 @@ func TestPaymentConsumerStruct(t *testing.T) {
 		kitchenBroker: kitchenBroker,
 	}
 
-	if consumer == nil {
-		t.Error("Expected consumer to be created")
-	}
-
 	if consumer.broker == nil {
 		t.Error("Expected broker to be set")
 	}

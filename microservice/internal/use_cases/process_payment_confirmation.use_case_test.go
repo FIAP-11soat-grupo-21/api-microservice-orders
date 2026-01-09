@@ -16,6 +16,7 @@ func TestNewProcessPaymentConfirmationUseCase(t *testing.T) {
 
 	if uc == nil {
 		t.Error("Expected use case to be created")
+		return
 	}
 
 	if uc.orderGateway != orderGateway {
