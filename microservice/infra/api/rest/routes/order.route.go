@@ -9,8 +9,8 @@ import (
 func RegisterOrderRoutes(router *gin.RouterGroup) {
 	handler := handlers.NewOrderHandler()
 
-	router.POST("/", handler.Create)
-	router.GET("/", handler.FindAll)
+	router.POST("", handler.Create)
+	router.GET("", handler.FindAll)
 	router.GET("/:id", handler.FindByID)
 	router.PUT("/:id", handler.Update)
 	router.DELETE("/:id", handler.Delete)

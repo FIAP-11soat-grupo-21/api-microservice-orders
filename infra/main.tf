@@ -54,6 +54,10 @@ module "GetOrderAPIRoute" {
       route_key  = "GET /orders"
       restricted = false
     },
+    get_all_status = {
+      route_key  = "GET /orders/status"
+      restricted = false
+    },
     create_order = {
       route_key  = "POST /orders"
       restricted = false
