@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"microservice/internal/adapters/dtos"
+	"microservice/internal/adapters/gateways"
 	"microservice/internal/domain/entities"
 	"microservice/internal/domain/exceptions"
 )
@@ -108,4 +109,92 @@ func TestUpdateOrderUseCase_PreservesOrderData(t *testing.T) {
 
 func TestNewUpdateOrderUseCase(t *testing.T) {
 	_ = NewUpdateOrderUseCase
+}
+func TestUpdateOrderUseCase_NewUpdateOrderUseCase(t *testing.T) {
+	orderGateway := gateways.OrderGateway{}
+	statusGateway := gateways.OrderStatusGateway{}
+	uc := NewUpdateOrderUseCase(orderGateway, statusGateway)
+
+	if uc == nil {
+		t.Error("Expected use case to be created")
+	}
+}
+
+func TestUpdateOrderUseCase_Execute_InvalidID(t *testing.T) {
+	orderGateway := gateways.OrderGateway{}
+	statusGateway := gateways.OrderStatusGateway{}
+	uc := NewUpdateOrderUseCase(orderGateway, statusGateway)
+
+	dto := dtos.UpdateOrderDTO{
+		ID:       "invalid-id",
+		StatusID: "status-1",
+	}
+
+	_, err := uc.Execute(dto)
+	if err == nil {
+		t.Error("Expected error for invalid ID")
+	}
+
+	if _, ok := err.(*exceptions.InvalidOrderDataException); !ok {
+		t.Errorf("Expected InvalidOrderDataException, got %T", err)
+	}
+}
+
+func TestUpdateOrderUseCase_Execute_EmptyID(t *testing.T) {
+	orderGateway := gateways.OrderGateway{}
+	statusGateway := gateways.OrderStatusGateway{}
+	uc := NewUpdateOrderUseCase(orderGateway, statusGateway)
+
+	dto := dtos.UpdateOrderDTO{
+		ID:       "",
+		StatusID: "status-1",
+	}
+
+	_, err := uc.Execute(dto)
+	if err == nil {
+		t.Error("Expected error for empty ID")
+	}
+}
+
+func TestUpdateOrderUseCase_Execute_ValidIDFormat(t *testing.T) {
+	validID := "550e8400-e29b-41d4-a716-446655440000"
+	err := entities.ValidateID(validID)
+	if err != nil {
+		t.Errorf("Expected no error for valid UUID, got %v", err)
+	}
+}
+
+func TestUpdateOrderUseCase_Execute_ReturnsEmptyOrderOnError(t *testing.T) {
+	orderGateway := gateways.OrderGateway{}
+	statusGateway := gateways.OrderStatusGateway{}
+	uc := NewUpdateOrderUseCase(orderGateway, statusGateway)
+
+	dto := dtos.UpdateOrderDTO{
+		ID:       "invalid-id",
+		StatusID: "status-1",
+	}
+
+	order, err := uc.Execute(dto)
+	if err == nil {
+		t.Error("Expected error for invalid ID")
+	}
+
+	if !order.IsEmpty() {
+		t.Error("Expected empty order on error")
+	}
+}
+
+func TestUpdateOrderDTO_Structure(t *testing.T) {
+	dto := dtos.UpdateOrderDTO{
+		ID:       "order-123",
+		StatusID: "status-456",
+	}
+
+	if dto.ID != "order-123" {
+		t.Errorf("Expected ID 'order-123', got '%s'", dto.ID)
+	}
+
+	if dto.StatusID != "status-456" {
+		t.Errorf("Expected StatusID 'status-456', got '%s'", dto.StatusID)
+	}
 }
