@@ -13,19 +13,9 @@ output "sqs_orders_queue_url" {
   value       = data.terraform_remote_state.infra.outputs.sqs_orders_queue_url
 }
 
-output "sqs_orders_queue_arn" {
-  description = "ARN da fila SQS do Orders (do infra-core)"
-  value       = data.terraform_remote_state.infra.outputs.sqs_orders_queue_arn
-}
-
 output "sqs_orders_order_error_queue_url" {
   description = "URL da fila SQS de erro do Orders (do infra-core)"
   value       = data.terraform_remote_state.infra.outputs.sqs_orders_order_error_queue_url
-}
-
-output "sqs_orders_order_error_queue_arn" {
-  description = "ARN da fila SQS de erro do Orders (do infra-core)"
-  value       = data.terraform_remote_state.infra.outputs.sqs_orders_order_error_queue_arn
 }
 
 output "sqs_payments_queue_url" {
@@ -33,20 +23,12 @@ output "sqs_payments_queue_url" {
   value       = data.terraform_remote_state.infra.outputs.sqs_payments_queue_url
 }
 
-output "sqs_payments_queue_arn" {
-  description = "ARN da fila SQS do Payments (do infra-core)"
-  value       = data.terraform_remote_state.infra.outputs.sqs_payments_queue_arn
-}
-
 output "sqs_kitchen_orders_queue_url" {
   description = "URL da fila SQS do Kitchen Orders (do infra-core)"
   value       = data.terraform_remote_state.infra.outputs.sqs_kitchen_orders_queue_url
 }
 
-output "sqs_kitchen_orders_queue_arn" {
-  description = "ARN da fila SQS do Kitchen Orders (do infra-core)"
-  value       = data.terraform_remote_state.infra.outputs.sqs_kitchen_orders_queue_arn
-}
+
 
 output "ecs_service_id" {
   description = "ID do serviço ECS do Orders"
