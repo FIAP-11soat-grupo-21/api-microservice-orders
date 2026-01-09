@@ -192,11 +192,23 @@ func TestCreateOrderUseCase_Execute_StatusNotFound_Integration(t *testing.T) {
 func TestFindAllOrdersUseCase_Execute_Integration(t *testing.T) {
 	orderDS := newTestOrderDataSource()
 
-	// Add test data
-	orderDS.orders["order-1"] = daos.OrderDAO{
-		ID:         "order-1",
+	orderDS.orders["550e8400-e29b-41d4-a716-446655440000"] = daos.OrderDAO{
+		ID:         "550e8400-e29b-41d4-a716-446655440000",
 		CustomerID: stringPtr("customer-1"),
 		Amount:     25.0,
+		Status: daos.OrderStatusDAO{
+			ID:   "status-1",
+			Name: "Pending",
+		},
+		Items: []daos.OrderItemDAO{
+			{
+				ID:        "item-1",
+				OrderID:   "550e8400-e29b-41d4-a716-446655440000",
+				ProductID: "product-1",
+				Quantity:  1,
+				UnitPrice: 25.0,
+			},
+		},
 	}
 
 	orderGateway := gateways.NewOrderGateway(orderDS)

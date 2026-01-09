@@ -160,7 +160,24 @@ func TestOrderController_FindAll_Success(t *testing.T) {
 	orderDS := &mockOrderDataSource{
 		findAllFunc: func(filter dtos.OrderFilterDTO) ([]daos.OrderDAO, error) {
 			return []daos.OrderDAO{
-				{ID: "order-1", CustomerID: stringPtr("customer-1"), Amount: 25.0},
+				{
+					ID:         "550e8400-e29b-41d4-a716-446655440000",
+					CustomerID: stringPtr("customer-1"),
+					Amount:     25.0,
+					Status: daos.OrderStatusDAO{
+						ID:   "status-1",
+						Name: "Pending",
+					},
+					Items: []daos.OrderItemDAO{
+						{
+							ID:        "item-1",
+							OrderID:   "550e8400-e29b-41d4-a716-446655440000",
+							ProductID: "product-1",
+							Quantity:  1,
+							UnitPrice: 25.0,
+						},
+					},
+				},
 			}, nil
 		},
 	}
@@ -201,7 +218,24 @@ func TestOrderController_FindAll_Error(t *testing.T) {
 func TestOrderController_FindByID_Success(t *testing.T) {
 	orderDS := &mockOrderDataSource{
 		findByIDFunc: func(id string) (daos.OrderDAO, error) {
-			return daos.OrderDAO{ID: "order-1", CustomerID: stringPtr("customer-1"), Amount: 25.0}, nil
+			return daos.OrderDAO{
+				ID:         "550e8400-e29b-41d4-a716-446655440000",
+				CustomerID: stringPtr("customer-1"),
+				Amount:     25.0,
+				Status: daos.OrderStatusDAO{
+					ID:   "status-1",
+					Name: "Pending",
+				},
+				Items: []daos.OrderItemDAO{
+					{
+						ID:        "item-1",
+						OrderID:   "550e8400-e29b-41d4-a716-446655440000",
+						ProductID: "product-1",
+						Quantity:  1,
+						UnitPrice: 25.0,
+					},
+				},
+			}, nil
 		},
 	}
 	statusDS := &mockOrderStatusDataSource{}
@@ -209,14 +243,14 @@ func TestOrderController_FindByID_Success(t *testing.T) {
 
 	controller := NewOrderController(orderDS, statusDS, broker)
 
-	result, err := controller.FindByID("order-1")
+	result, err := controller.FindByID("550e8400-e29b-41d4-a716-446655440000")
 
 	if err != nil {
 		t.Errorf("Expected no error, got %v", err)
 	}
 
-	if result.ID != "order-1" {
-		t.Errorf("Expected order ID 'order-1', got '%s'", result.ID)
+	if result.ID != "550e8400-e29b-41d4-a716-446655440000" {
+		t.Errorf("Expected order ID '550e8400-e29b-41d4-a716-446655440000', got '%s'", result.ID)
 	}
 }
 
@@ -241,7 +275,24 @@ func TestOrderController_FindByID_NotFound(t *testing.T) {
 func TestOrderController_Update_Success(t *testing.T) {
 	orderDS := &mockOrderDataSource{
 		findByIDFunc: func(id string) (daos.OrderDAO, error) {
-			return daos.OrderDAO{ID: "order-1", CustomerID: stringPtr("customer-1"), Amount: 25.0}, nil
+			return daos.OrderDAO{
+				ID:         "550e8400-e29b-41d4-a716-446655440000",
+				CustomerID: stringPtr("customer-1"),
+				Amount:     25.0,
+				Status: daos.OrderStatusDAO{
+					ID:   "status-1",
+					Name: "Pending",
+				},
+				Items: []daos.OrderItemDAO{
+					{
+						ID:        "item-1",
+						OrderID:   "550e8400-e29b-41d4-a716-446655440000",
+						ProductID: "product-1",
+						Quantity:  1,
+						UnitPrice: 25.0,
+					},
+				},
+			}, nil
 		},
 		updateFunc: func(order daos.OrderDAO) error {
 			return nil
@@ -257,7 +308,7 @@ func TestOrderController_Update_Success(t *testing.T) {
 	controller := NewOrderController(orderDS, statusDS, broker)
 
 	dto := dtos.UpdateOrderDTO{
-		ID:       "order-1",
+		ID:       "550e8400-e29b-41d4-a716-446655440000",
 		StatusID: "status-2",
 	}
 
@@ -267,13 +318,33 @@ func TestOrderController_Update_Success(t *testing.T) {
 		t.Errorf("Expected no error, got %v", err)
 	}
 
-	if result.ID != "order-1" {
-		t.Errorf("Expected order ID 'order-1', got '%s'", result.ID)
+	if result.ID != "550e8400-e29b-41d4-a716-446655440000" {
+		t.Errorf("Expected order ID '550e8400-e29b-41d4-a716-446655440000', got '%s'", result.ID)
 	}
 }
 
 func TestOrderController_Delete_Success(t *testing.T) {
 	orderDS := &mockOrderDataSource{
+		findByIDFunc: func(id string) (daos.OrderDAO, error) {
+			return daos.OrderDAO{
+				ID:         "550e8400-e29b-41d4-a716-446655440000",
+				CustomerID: stringPtr("customer-1"),
+				Amount:     25.0,
+				Status: daos.OrderStatusDAO{
+					ID:   "status-1",
+					Name: "Pending",
+				},
+				Items: []daos.OrderItemDAO{
+					{
+						ID:        "item-1",
+						OrderID:   "550e8400-e29b-41d4-a716-446655440000",
+						ProductID: "product-1",
+						Quantity:  1,
+						UnitPrice: 25.0,
+					},
+				},
+			}, nil
+		},
 		deleteFunc: func(id string) error {
 			return nil
 		},
@@ -283,7 +354,7 @@ func TestOrderController_Delete_Success(t *testing.T) {
 
 	controller := NewOrderController(orderDS, statusDS, broker)
 
-	err := controller.Delete("order-1")
+	err := controller.Delete("550e8400-e29b-41d4-a716-446655440000")
 
 	if err != nil {
 		t.Errorf("Expected no error, got %v", err)

@@ -6,19 +6,30 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func init() {
+func TestInit_RouterCreation(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-}
-
-func TestNewRouter(t *testing.T) {
-	defer func() {
-		if r := recover(); r != nil {
-			t.Log("NewRouter panicked as expected without database setup")
-		}
-	}()
-
+	
 	router := NewRouter()
+	
 	if router == nil {
-		t.Error("NewRouter() returned nil")
+		t.Error("Expected router to be created")
+	}
+	
+	routes := router.Routes()
+	
+	if len(routes) == 0 {
+		t.Error("Expected router to have routes configured")
+	}
+	
+	hasHealthRoute := false
+	for _, route := range routes {
+		if route.Path == "/health" && route.Method == "GET" {
+			hasHealthRoute = true
+			break
+		}
+	}
+	
+	if !hasHealthRoute {
+		t.Error("Expected health route to be configured")
 	}
 }
