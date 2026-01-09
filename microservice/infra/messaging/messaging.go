@@ -34,10 +34,17 @@ func Connect() error {
 		RabbitMQKitchenQueue: cfg.MessageBroker.RabbitMQ.KitchenQueue,
 	}
 
+	if cfg.MessageBroker.Type == "sqs" {
+		log.Printf("SQS Config - Payment Queue: %s", brokerConfig.SQSPaymentQueueURL)
+		log.Printf("SQS Config - Kitchen Queue: %s", brokerConfig.SQSKitchenQueueURL)
+		log.Printf("SQS Config - AWS Region: %s", brokerConfig.AWSRegion)
+	}
+
 	factory := brokers.NewFactory()
 	var err error
 	broker, err = factory.CreateBroker(brokerConfig)
 	if err != nil {
+		log.Printf("Failed to create message broker: %v", err)
 		return err
 	}
 

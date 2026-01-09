@@ -122,6 +122,14 @@ func (s *SQSBroker) deleteMessage(ctx context.Context, message types.Message) er
 }
 
 func (s *SQSBroker) SendToKitchen(message map[string]interface{}) error {
+	if s == nil {
+		return fmt.Errorf("SQS broker is not initialized")
+	}
+	
+	if s.client == nil {
+		return fmt.Errorf("SQS client is not initialized")
+	}
+
 	body, err := json.Marshal(message)
 	if err != nil {
 		return fmt.Errorf("failed to marshal kitchen message: %w", err)

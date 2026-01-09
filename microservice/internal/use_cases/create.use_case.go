@@ -78,6 +78,7 @@ func (uc *CreateOrderUseCase) Execute(customerID *string, items []dtos.CreateOrd
 			"customer_id": order.CustomerID,
 			"amount":      order.Amount.Value(),
 			"items":       items,
+			"type":        "order.created",
 		}
 
 		if err := uc.messageBroker.SendToKitchen(kitchenMessage); err != nil {
@@ -85,6 +86,8 @@ func (uc *CreateOrderUseCase) Execute(customerID *string, items []dtos.CreateOrd
 		} else {
 			log.Printf("Kitchen order creation message sent for order %s (Amount: %.2f, Items: %d)", order.ID, order.Amount.Value(), len(order.Items))
 		}
+	} else {
+		log.Printf("Warning: Message broker not available, skipping kitchen notification for order %s", order.ID)
 	}
 
 	return *order, nil
