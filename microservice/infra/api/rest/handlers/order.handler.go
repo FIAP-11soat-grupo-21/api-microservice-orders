@@ -23,11 +23,11 @@ func NewOrderHandler() *OrderHandler {
 	orderDataSource := factories.NewOrderDataSource()
 	orderStatusDataSource := factories.NewOrderStatusDataSource()
 	broker := messaging.GetBroker()
-	
+
 	if broker == nil {
 		log.Println("Warning: Message broker not available, orders will be created without messaging")
 	}
-	
+
 	controller := controllers.NewOrderController(orderDataSource, orderStatusDataSource, broker)
 
 	return &OrderHandler{

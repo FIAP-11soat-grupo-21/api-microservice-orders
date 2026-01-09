@@ -33,7 +33,7 @@ func (m *mockBroker) Close() error {
 func TestNewPaymentConsumer(t *testing.T) {
 	broker := &mockBroker{}
 	kitchenBroker := &mockBroker{}
-	processPaymentUC := &use_cases.ProcessPaymentConfirmationUseCase{}
+	processPaymentUC := &mockProcessPaymentUseCase{}
 
 	consumer := NewPaymentConsumer(broker, processPaymentUC, kitchenBroker)
 
@@ -64,7 +64,7 @@ func TestPaymentConsumerStruct(t *testing.T) {
 func TestPaymentConsumer_Start_Success(t *testing.T) {
 	broker := &mockBroker{consumeError: nil}
 	kitchenBroker := &mockBroker{}
-	processPaymentUC := &use_cases.ProcessPaymentConfirmationUseCase{}
+	processPaymentUC := &mockProcessPaymentUseCase{}
 
 	consumer := NewPaymentConsumer(broker, processPaymentUC, kitchenBroker)
 
@@ -77,7 +77,7 @@ func TestPaymentConsumer_Start_BrokerError(t *testing.T) {
 	expectedError := assert.AnError
 	broker := &mockBroker{consumeError: expectedError}
 	kitchenBroker := &mockBroker{}
-	processPaymentUC := &use_cases.ProcessPaymentConfirmationUseCase{}
+	processPaymentUC := &mockProcessPaymentUseCase{}
 
 	consumer := NewPaymentConsumer(broker, processPaymentUC, kitchenBroker)
 
@@ -138,7 +138,7 @@ func TestPaymentConsumer_sendToKitchen_MessageStructure(t *testing.T) {
 func TestPaymentConsumer_sendToKitchen_Success(t *testing.T) {
 	broker := &mockBroker{}
 	kitchenBroker := &mockBroker{sendError: nil}
-	processPaymentUC := &use_cases.ProcessPaymentConfirmationUseCase{}
+	processPaymentUC := &mockProcessPaymentUseCase{}
 
 	consumer := NewPaymentConsumer(broker, processPaymentUC, kitchenBroker)
 
@@ -174,7 +174,7 @@ func TestPaymentConsumer_sendToKitchen_Error(t *testing.T) {
 	broker := &mockBroker{}
 	expectedError := assert.AnError
 	kitchenBroker := &mockBroker{sendError: expectedError}
-	processPaymentUC := &use_cases.ProcessPaymentConfirmationUseCase{}
+	processPaymentUC := &mockProcessPaymentUseCase{}
 
 	consumer := NewPaymentConsumer(broker, processPaymentUC, kitchenBroker)
 
@@ -197,4 +197,248 @@ func TestPaymentConsumer_sendToKitchen_Error(t *testing.T) {
 
 func stringPtr(s string) *string {
 	return &s
+}
+
+// Testes para o método processPaymentConfirmation (0% coverage)
+
+type mockProcessPaymentUseCase struct {
+	result *use_cases.PaymentConfirmationResult
+	error  error
+}
+
+func (m *mockProcessPaymentUseCase) Execute(dto use_cases.PaymentConfirmationDTO) (*use_cases.PaymentConfirmationResult, error) {
+	return m.result, m.error
+}
+
+func TestPaymentConsumer_processPaymentConfirmation_Success_WithKitchenNotification(t *testing.T) {
+	broker := &mockBroker{}
+	kitchenBroker := &mockBroker{sendError: nil}
+
+	amount, _ := value_objects.NewAmount(199.99)
+	status, _ := entities.NewOrderStatus("paid", "Paid")
+	order := entities.Order{
+		ID:         "order-123",
+		CustomerID: stringPtr("customer-456"),
+		Amount:     amount,
+		Status:     *status,
+		Items:      []entities.OrderItem{},
+		CreatedAt:  time.Now(),
+	}
+
+	mockUseCase := &mockProcessPaymentUseCase{
+		result: &use_cases.PaymentConfirmationResult{
+			Order:               order,
+			StatusChanged:       true,
+			ShouldNotifyKitchen: true,
+			Message:             "Payment processed successfully",
+		},
+		error: nil,
+	}
+
+	consumer := NewPaymentConsumer(broker, mockUseCase, kitchenBroker)
+
+	message := brokers.PaymentConfirmationMessage{
+		OrderID:       "order-123",
+		PaymentID:     "payment-456",
+		Status:        "confirmed",
+		Amount:        199.99,
+		PaymentMethod: "credit_card",
+		ProcessedAt:   time.Now(),
+	}
+
+	err := consumer.processPaymentConfirmation(message)
+	assert.NoError(t, err)
+}
+
+func TestPaymentConsumer_processPaymentConfirmation_Success_WithoutKitchenNotification(t *testing.T) {
+	broker := &mockBroker{}
+	kitchenBroker := &mockBroker{}
+
+	amount, _ := value_objects.NewAmount(99.99)
+	status, _ := entities.NewOrderStatus("failed", "Failed")
+	order := entities.Order{
+		ID:         "order-123",
+		CustomerID: stringPtr("customer-456"),
+		Amount:     amount,
+		Status:     *status,
+		Items:      []entities.OrderItem{},
+		CreatedAt:  time.Now(),
+	}
+
+	mockUseCase := &mockProcessPaymentUseCase{
+		result: &use_cases.PaymentConfirmationResult{
+			Order:               order,
+			StatusChanged:       true,
+			ShouldNotifyKitchen: false,
+			Message:             "Payment failed",
+		},
+		error: nil,
+	}
+
+	consumer := NewPaymentConsumer(broker, mockUseCase, kitchenBroker)
+
+	message := brokers.PaymentConfirmationMessage{
+		OrderID:       "order-123",
+		PaymentID:     "payment-456",
+		Status:        "failed",
+		Amount:        99.99,
+		PaymentMethod: "credit_card",
+		ProcessedAt:   time.Now(),
+	}
+
+	err := consumer.processPaymentConfirmation(message)
+	assert.NoError(t, err)
+}
+
+func TestPaymentConsumer_processPaymentConfirmation_UseCaseError(t *testing.T) {
+	broker := &mockBroker{}
+	kitchenBroker := &mockBroker{}
+
+	expectedError := assert.AnError
+	mockUseCase := &mockProcessPaymentUseCase{
+		result: nil,
+		error:  expectedError,
+	}
+
+	consumer := NewPaymentConsumer(broker, mockUseCase, kitchenBroker)
+
+	message := brokers.PaymentConfirmationMessage{
+		OrderID:       "order-123",
+		PaymentID:     "payment-456",
+		Status:        "confirmed",
+		Amount:        99.99,
+		PaymentMethod: "credit_card",
+		ProcessedAt:   time.Now(),
+	}
+
+	err := consumer.processPaymentConfirmation(message)
+	assert.Error(t, err)
+	assert.Equal(t, expectedError, err)
+}
+
+func TestPaymentConsumer_processPaymentConfirmation_KitchenNotificationError(t *testing.T) {
+	broker := &mockBroker{}
+	kitchenBrokerError := assert.AnError
+	kitchenBroker := &mockBroker{sendError: kitchenBrokerError}
+
+	amount, _ := value_objects.NewAmount(299.99)
+	status, _ := entities.NewOrderStatus("paid", "Paid")
+	order := entities.Order{
+		ID:         "order-123",
+		CustomerID: stringPtr("customer-456"),
+		Amount:     amount,
+		Status:     *status,
+		Items:      []entities.OrderItem{},
+		CreatedAt:  time.Now(),
+	}
+
+	mockUseCase := &mockProcessPaymentUseCase{
+		result: &use_cases.PaymentConfirmationResult{
+			Order:               order,
+			StatusChanged:       true,
+			ShouldNotifyKitchen: true,
+			Message:             "Payment processed successfully",
+		},
+		error: nil,
+	}
+
+	consumer := NewPaymentConsumer(broker, mockUseCase, kitchenBroker)
+
+	message := brokers.PaymentConfirmationMessage{
+		OrderID:       "order-123",
+		PaymentID:     "payment-456",
+		Status:        "confirmed",
+		Amount:        299.99,
+		PaymentMethod: "debit_card",
+		ProcessedAt:   time.Now(),
+	}
+
+	err := consumer.processPaymentConfirmation(message)
+	assert.NoError(t, err)
+}
+
+func TestPaymentConsumer_processPaymentConfirmation_DTOMapping(t *testing.T) {
+	broker := &mockBroker{}
+	kitchenBroker := &mockBroker{}
+
+	mockUseCase := &mockProcessPaymentUseCase{
+		result: &use_cases.PaymentConfirmationResult{
+			Order: entities.Order{
+				ID: "test-order",
+			},
+			StatusChanged:       false,
+			ShouldNotifyKitchen: false,
+			Message:             "Test message",
+		},
+		error: nil,
+	}
+
+	consumer := NewPaymentConsumer(broker, mockUseCase, kitchenBroker)
+
+	testTime := time.Now()
+	message := brokers.PaymentConfirmationMessage{
+		OrderID:       "test-order-123",
+		PaymentID:     "test-payment-456",
+		Status:        "test-status",
+		Amount:        123.45,
+		PaymentMethod: "test-method",
+		ProcessedAt:   testTime,
+	}
+
+	err := consumer.processPaymentConfirmation(message)
+	assert.NoError(t, err)
+
+}
+
+func TestPaymentConsumer_processPaymentConfirmation_CompleteFlow(t *testing.T) {
+	broker := &mockBroker{}
+	kitchenBroker := &mockBroker{sendError: nil}
+
+	amount, _ := value_objects.NewAmount(399.99)
+	status, _ := entities.NewOrderStatus("paid", "Paid")
+
+	productID, _ := value_objects.NewProductID("product-1")
+	quantity, _ := value_objects.NewQuantity(2)
+	unitPrice, _ := value_objects.NewUnitPrice(199.995)
+
+	orderItem := entities.OrderItem{
+		ID:        "item-1",
+		OrderID:   "order-123",
+		ProductID: productID,
+		Quantity:  quantity,
+		UnitPrice: unitPrice,
+	}
+
+	order := entities.Order{
+		ID:         "order-123",
+		CustomerID: stringPtr("customer-456"),
+		Amount:     amount,
+		Status:     *status,
+		Items:      []entities.OrderItem{orderItem},
+		CreatedAt:  time.Now(),
+	}
+
+	mockUseCase := &mockProcessPaymentUseCase{
+		result: &use_cases.PaymentConfirmationResult{
+			Order:               order,
+			StatusChanged:       true,
+			ShouldNotifyKitchen: true,
+			Message:             "Order successfully paid and ready for kitchen",
+		},
+		error: nil,
+	}
+
+	consumer := NewPaymentConsumer(broker, mockUseCase, kitchenBroker)
+
+	message := brokers.PaymentConfirmationMessage{
+		OrderID:       "order-123",
+		PaymentID:     "payment-456",
+		Status:        "confirmed",
+		Amount:        399.99,
+		PaymentMethod: "pix",
+		ProcessedAt:   time.Now(),
+	}
+
+	err := consumer.processPaymentConfirmation(message)
+	assert.NoError(t, err)
 }

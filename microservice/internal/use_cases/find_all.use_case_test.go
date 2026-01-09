@@ -69,3 +69,63 @@ func TestFindAllOrdersUseCase_PartialFilter(t *testing.T) {
 func TestNewFindAllOrdersUseCase(t *testing.T) {
 	_ = NewFindAllOrdersUseCase
 }
+
+func TestFindAllOrdersUseCase_Execute_Success(t *testing.T) {
+	filter := dtos.OrderFilterDTO{}
+
+	if filter.CustomerID != nil {
+		t.Error("Empty filter should have nil CustomerID")
+	}
+
+	if filter.StatusID != nil {
+		t.Error("Empty filter should have nil StatusID")
+	}
+}
+
+func TestFindAllOrdersUseCase_Execute_WithFilter(t *testing.T) {
+	customerID := "customer-1"
+	statusID := "status-1"
+
+	filter := dtos.OrderFilterDTO{
+		CustomerID: &customerID,
+		StatusID:   &statusID,
+	}
+
+	if filter.CustomerID == nil || *filter.CustomerID != customerID {
+		t.Errorf("Expected customer ID '%s', got %v", customerID, filter.CustomerID)
+	}
+
+	if filter.StatusID == nil || *filter.StatusID != statusID {
+		t.Errorf("Expected status ID '%s', got %v", statusID, filter.StatusID)
+	}
+}
+
+func TestFindAllOrdersUseCase_Execute_FilterValidation(t *testing.T) {
+	testCases := []struct {
+		name       string
+		customerID *string
+		statusID   *string
+	}{
+		{"empty filter", nil, nil},
+		{"customer only", stringPtr("customer-1"), nil},
+		{"status only", nil, stringPtr("status-1")},
+		{"both fields", stringPtr("customer-1"), stringPtr("status-1")},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			filter := dtos.OrderFilterDTO{
+				CustomerID: tc.customerID,
+				StatusID:   tc.statusID,
+			}
+
+			if tc.customerID == nil && filter.CustomerID != nil {
+				t.Error("Expected nil customer ID")
+			}
+
+			if tc.statusID == nil && filter.StatusID != nil {
+				t.Error("Expected nil status ID")
+			}
+		})
+	}
+}

@@ -37,7 +37,7 @@ func TestFactory_CreateBroker_SQS(t *testing.T) {
 
 func TestFactory_CreateBroker_RabbitMQ(t *testing.T) {
 	t.Skip("Skipping RabbitMQ test - requires RabbitMQ server running")
-	
+
 	factory := NewFactory()
 	config := BrokerConfig{
 		Type:                 "rabbitmq",
@@ -63,9 +63,9 @@ func TestFactory_CreateBroker_RabbitMQ(t *testing.T) {
 
 func TestFactory_CreateBroker_CaseInsensitive(t *testing.T) {
 	factory := NewFactory()
-	
+
 	testCases := []string{"SQS", "sqs", "Sqs", "SqS"}
-	
+
 	for _, brokerType := range testCases {
 		config := BrokerConfig{
 			Type:               brokerType,
