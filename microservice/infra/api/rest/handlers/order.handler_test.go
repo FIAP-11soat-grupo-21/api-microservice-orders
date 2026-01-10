@@ -610,3 +610,361 @@ func TestOrderHandler_FindAllStatus_Error(t *testing.T) {
 		t.Log("FindAllStatus() returned data despite error")
 	}
 }
+func TestOrderHandler_UpdateStatus_Success(t *testing.T) {
+	customerID := "customer-123"
+	now := time.Now()
+
+	orderDS := &mockOrderDS{
+		findByIDFunc: func(id string) (daos.OrderDAO, error) {
+			return daos.OrderDAO{
+				ID:         "550e8400-e29b-41d4-a716-446655440000",
+				CustomerID: &customerID,
+				Amount:     20.0,
+				Status:     daos.OrderStatusDAO{ID: "status-1", Name: "Pending"},
+				Items: []daos.OrderItemDAO{
+					{ID: "item-1", OrderID: "550e8400-e29b-41d4-a716-446655440000", ProductID: "product-1", Quantity: 2, UnitPrice: 10.0},
+				},
+				CreatedAt: now,
+			}, nil
+		},
+		updateFunc: func(order daos.OrderDAO) error {
+			return nil
+		},
+	}
+	statusDS := &mockOrderStatusDS{
+		findByNameFunc: func(name string) (daos.OrderStatusDAO, error) {
+			return daos.OrderStatusDAO{ID: "status-2", Name: name}, nil
+		},
+	}
+	cleanup := setupMocks(orderDS, statusDS)
+	defer cleanup()
+
+	handler := NewOrderHandler()
+
+	w := httptest.NewRecorder()
+	_, router := gin.CreateTestContext(w)
+
+	router.PUT("/orders/:id/status", handler.UpdateStatus)
+
+	body := schemas.UpdateOrderStatusSchema{Status: "Em preparação"}
+	jsonBody, _ := json.Marshal(body)
+
+	req := httptest.NewRequest("PUT", "/orders/550e8400-e29b-41d4-a716-446655440000/status", bytes.NewBuffer(jsonBody))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("UpdateStatus() status = %v, want %v", w.Code, http.StatusOK)
+	}
+
+	var response map[string]interface{}
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	if err != nil {
+		t.Errorf("Failed to unmarshal response: %v", err)
+	}
+
+	if response["message"] != "Order status updated successfully" {
+		t.Errorf("UpdateStatus() message = %v, want 'Order status updated successfully'", response["message"])
+	}
+}
+
+func TestOrderHandler_UpdateStatus_InvalidBody(t *testing.T) {
+	orderDS := &mockOrderDS{}
+	statusDS := &mockOrderStatusDS{}
+	cleanup := setupMocks(orderDS, statusDS)
+	defer cleanup()
+
+	handler := NewOrderHandler()
+
+	w := httptest.NewRecorder()
+	_, router := gin.CreateTestContext(w)
+
+	router.PUT("/orders/:id/status", handler.UpdateStatus)
+
+	req := httptest.NewRequest("PUT", "/orders/550e8400-e29b-41d4-a716-446655440000/status", bytes.NewBuffer([]byte("invalid json")))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("UpdateStatus() status = %v, want %v", w.Code, http.StatusBadRequest)
+	}
+
+	var response map[string]interface{}
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	if err != nil {
+		t.Errorf("Failed to unmarshal response: %v", err)
+	}
+
+	if response["error"] != "Invalid request body" {
+		t.Errorf("UpdateStatus() error = %v, want 'Invalid request body'", response["error"])
+	}
+}
+
+func TestOrderHandler_UpdateStatus_OrderNotFound(t *testing.T) {
+	orderDS := &mockOrderDS{
+		findByIDFunc: func(id string) (daos.OrderDAO, error) {
+			return daos.OrderDAO{}, errors.New("order not found")
+		},
+	}
+	statusDS := &mockOrderStatusDS{}
+	cleanup := setupMocks(orderDS, statusDS)
+	defer cleanup()
+
+	handler := NewOrderHandler()
+
+	w := httptest.NewRecorder()
+	_, router := gin.CreateTestContext(w)
+
+	// Add the error handler middleware to process errors properly
+	router.Use(func(ctx *gin.Context) {
+		ctx.Next()
+		if len(ctx.Errors) > 0 {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+			ctx.Abort()
+		}
+	})
+
+	router.PUT("/orders/:id/status", handler.UpdateStatus)
+
+	body := schemas.UpdateOrderStatusSchema{Status: "Em preparação"}
+	jsonBody, _ := json.Marshal(body)
+
+	req := httptest.NewRequest("PUT", "/orders/non-existent-order/status", bytes.NewBuffer(jsonBody))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("UpdateStatus() status = %v, want %v", w.Code, http.StatusInternalServerError)
+	}
+}
+
+func TestOrderHandler_UpdateStatus_StatusNotFound(t *testing.T) {
+	customerID := "customer-123"
+	now := time.Now()
+
+	orderDS := &mockOrderDS{
+		findByIDFunc: func(id string) (daos.OrderDAO, error) {
+			return daos.OrderDAO{
+				ID:         "550e8400-e29b-41d4-a716-446655440000",
+				CustomerID: &customerID,
+				Amount:     20.0,
+				Status:     daos.OrderStatusDAO{ID: "status-1", Name: "Pending"},
+				Items:      []daos.OrderItemDAO{},
+				CreatedAt:  now,
+			}, nil
+		},
+	}
+	statusDS := &mockOrderStatusDS{
+		findByNameFunc: func(name string) (daos.OrderStatusDAO, error) {
+			return daos.OrderStatusDAO{}, errors.New("status not found")
+		},
+	}
+	cleanup := setupMocks(orderDS, statusDS)
+	defer cleanup()
+
+	handler := NewOrderHandler()
+
+	w := httptest.NewRecorder()
+	_, router := gin.CreateTestContext(w)
+
+	// Add the error handler middleware to process errors properly
+	router.Use(func(ctx *gin.Context) {
+		ctx.Next()
+		if len(ctx.Errors) > 0 {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+			ctx.Abort()
+		}
+	})
+
+	router.PUT("/orders/:id/status", handler.UpdateStatus)
+
+	body := schemas.UpdateOrderStatusSchema{Status: "Status Inexistente"}
+	jsonBody, _ := json.Marshal(body)
+
+	req := httptest.NewRequest("PUT", "/orders/550e8400-e29b-41d4-a716-446655440000/status", bytes.NewBuffer(jsonBody))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("UpdateStatus() status = %v, want %v", w.Code, http.StatusInternalServerError)
+	}
+}
+
+func TestOrderHandler_UpdateStatus_UpdateError(t *testing.T) {
+	customerID := "customer-123"
+	now := time.Now()
+
+	orderDS := &mockOrderDS{
+		findByIDFunc: func(id string) (daos.OrderDAO, error) {
+			return daos.OrderDAO{
+				ID:         "550e8400-e29b-41d4-a716-446655440000",
+				CustomerID: &customerID,
+				Amount:     20.0,
+				Status:     daos.OrderStatusDAO{ID: "status-1", Name: "Pending"},
+				Items:      []daos.OrderItemDAO{},
+				CreatedAt:  now,
+			}, nil
+		},
+		updateFunc: func(order daos.OrderDAO) error {
+			return errors.New("database update failed")
+		},
+	}
+	statusDS := &mockOrderStatusDS{
+		findByNameFunc: func(name string) (daos.OrderStatusDAO, error) {
+			return daos.OrderStatusDAO{ID: "status-2", Name: name}, nil
+		},
+	}
+	cleanup := setupMocks(orderDS, statusDS)
+	defer cleanup()
+
+	handler := NewOrderHandler()
+
+	w := httptest.NewRecorder()
+	_, router := gin.CreateTestContext(w)
+
+	// Add the error handler middleware to process errors properly
+	router.Use(func(ctx *gin.Context) {
+		ctx.Next()
+		if len(ctx.Errors) > 0 {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+			ctx.Abort()
+		}
+	})
+
+	router.PUT("/orders/:id/status", handler.UpdateStatus)
+
+	body := schemas.UpdateOrderStatusSchema{Status: "Em preparação"}
+	jsonBody, _ := json.Marshal(body)
+
+	req := httptest.NewRequest("PUT", "/orders/550e8400-e29b-41d4-a716-446655440000/status", bytes.NewBuffer(jsonBody))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("UpdateStatus() status = %v, want %v", w.Code, http.StatusInternalServerError)
+	}
+}
+
+func TestOrderHandler_UpdateStatus_SpecialCharactersInID(t *testing.T) {
+	customerID := "customer-123"
+	now := time.Now()
+
+	orderDS := &mockOrderDS{
+		findByIDFunc: func(id string) (daos.OrderDAO, error) {
+			// Verificar se caracteres especiais foram sanitizados
+			if id == "order_with_newline_and_carriage_return" {
+				return daos.OrderDAO{
+					ID:         id,
+					CustomerID: &customerID,
+					Amount:     20.0,
+					Status:     daos.OrderStatusDAO{ID: "status-1", Name: "Pending"},
+					Items:      []daos.OrderItemDAO{},
+					CreatedAt:  now,
+				}, nil
+			}
+			return daos.OrderDAO{}, errors.New("order not found")
+		},
+		updateFunc: func(order daos.OrderDAO) error {
+			return nil
+		},
+	}
+	statusDS := &mockOrderStatusDS{
+		findByNameFunc: func(name string) (daos.OrderStatusDAO, error) {
+			return daos.OrderStatusDAO{ID: "status-2", Name: name}, nil
+		},
+	}
+	cleanup := setupMocks(orderDS, statusDS)
+	defer cleanup()
+
+	handler := NewOrderHandler()
+
+	w := httptest.NewRecorder()
+	_, router := gin.CreateTestContext(w)
+
+	router.PUT("/orders/:id/status", handler.UpdateStatus)
+
+	body := schemas.UpdateOrderStatusSchema{Status: "Em preparação"}
+	jsonBody, _ := json.Marshal(body)
+
+	// Testar com caracteres especiais no ID que devem ser sanitizados
+	// Usar URL encoding para caracteres especiais
+	req := httptest.NewRequest("PUT", "/orders/order%0Awith%0Dnewline%0Aand%0Dcarriage%0Dreturn/status", bytes.NewBuffer(jsonBody))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("UpdateStatus() status = %v, want %v", w.Code, http.StatusOK)
+	}
+}
+
+func TestOrderHandler_UpdateStatus_DifferentStatuses(t *testing.T) {
+	testCases := []struct {
+		name   string
+		status string
+	}{
+		{
+			name:   "Em preparação status",
+			status: "Em preparação",
+		},
+		{
+			name:   "Pronto status",
+			status: "Pronto",
+		},
+		{
+			name:   "Finalizado status",
+			status: "Finalizado",
+		},
+		{
+			name:   "Cancelado status",
+			status: "Cancelado",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			customerID := "customer-123"
+			now := time.Now()
+
+			orderDS := &mockOrderDS{
+				findByIDFunc: func(id string) (daos.OrderDAO, error) {
+					return daos.OrderDAO{
+						ID:         "550e8400-e29b-41d4-a716-446655440000",
+						CustomerID: &customerID,
+						Amount:     20.0,
+						Status:     daos.OrderStatusDAO{ID: "status-1", Name: "Pending"},
+						Items:      []daos.OrderItemDAO{},
+						CreatedAt:  now,
+					}, nil
+				},
+				updateFunc: func(order daos.OrderDAO) error {
+					return nil
+				},
+			}
+			statusDS := &mockOrderStatusDS{
+				findByNameFunc: func(name string) (daos.OrderStatusDAO, error) {
+					return daos.OrderStatusDAO{ID: "status-2", Name: name}, nil
+				},
+			}
+			cleanup := setupMocks(orderDS, statusDS)
+			defer cleanup()
+
+			handler := NewOrderHandler()
+
+			w := httptest.NewRecorder()
+			_, router := gin.CreateTestContext(w)
+
+			router.PUT("/orders/:id/status", handler.UpdateStatus)
+
+			body := schemas.UpdateOrderStatusSchema{Status: tc.status}
+			jsonBody, _ := json.Marshal(body)
+
+			req := httptest.NewRequest("PUT", "/orders/550e8400-e29b-41d4-a716-446655440000/status", bytes.NewBuffer(jsonBody))
+			req.Header.Set("Content-Type", "application/json")
+			router.ServeHTTP(w, req)
+
+			if w.Code != http.StatusOK {
+				t.Errorf("UpdateStatus() for %s status = %v, want %v", tc.status, w.Code, http.StatusOK)
+			}
+		})
+	}
+}

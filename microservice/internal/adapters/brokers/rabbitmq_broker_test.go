@@ -105,10 +105,64 @@ func TestRabbitMQBroker_shouldDiscardMessage(t *testing.T) {
 	}
 }
 
+func TestRabbitMQBroker_Close_NilChannel(t *testing.T) {
+	broker := &RabbitMQBroker{
+		channel: nil,
+	}
+
+	err := broker.Close()
+	assert.NoError(t, err) // Should handle nil channel gracefully
+}
+
 type mockError struct {
 	message string
 }
 
 func (e *mockError) Error() string {
 	return e.message
+}
+func TestRabbitMQBroker_Structure(t *testing.T) {
+	broker := &RabbitMQBroker{
+		ordersQueue: "orders.updates",
+	}
+
+	assert.Equal(t, "orders.updates", broker.ordersQueue)
+}
+
+func TestRabbitMQBroker_shouldDiscardMessage_RecoverableErrors(t *testing.T) {
+	broker := &RabbitMQBroker{}
+
+	recoverableErrors := []string{
+		"connection refused",
+		"timeout",
+		"network unreachable",
+		"temporary failure",
+	}
+
+	for _, errMsg := range recoverableErrors {
+		t.Run(errMsg, func(t *testing.T) {
+			err := &mockError{message: errMsg}
+			assert.False(t, broker.shouldDiscardMessage(err))
+		})
+	}
+}
+
+func TestRabbitMQBroker_shouldDiscardMessage_NonRecoverableErrors(t *testing.T) {
+	broker := &RabbitMQBroker{}
+
+	nonRecoverableErrors := []string{
+		"Order not found",
+		"Invalid order ID",
+		"Invalid payment confirmation",
+		"order ID is required",
+		"payment ID is required",
+		"payment status is required",
+	}
+
+	for _, errMsg := range nonRecoverableErrors {
+		t.Run(errMsg, func(t *testing.T) {
+			err := &mockError{message: errMsg}
+			assert.True(t, broker.shouldDiscardMessage(err))
+		})
+	}
 }

@@ -12,8 +12,8 @@ import (
 type OrderController struct {
 	orderDataSource       interfaces.IOrderDataSource
 	orderStatusDataSource interfaces.IOrderStatusDataSource
-	orderGateway          gateways.OrderGateway
-	orderStatusGateway    gateways.OrderStatusGateway
+	orderGateway          *gateways.OrderGateway
+	orderStatusGateway    *gateways.OrderStatusGateway
 	messageBroker         brokers.MessageBroker
 }
 
@@ -21,8 +21,8 @@ func NewOrderController(orderDataSource interfaces.IOrderDataSource, orderStatus
 	return &OrderController{
 		orderDataSource:       orderDataSource,
 		orderStatusDataSource: orderStatusDataSource,
-		orderGateway:          *gateways.NewOrderGateway(orderDataSource),
-		orderStatusGateway:    *gateways.NewOrderStatusGateway(orderStatusDataSource),
+		orderGateway:          gateways.NewOrderGateway(orderDataSource),
+		orderStatusGateway:    gateways.NewOrderStatusGateway(orderStatusDataSource),
 		messageBroker:         messageBroker,
 	}
 }
@@ -64,7 +64,7 @@ func (c *OrderController) Update(dto dtos.UpdateOrderDTO) (dtos.OrderResponseDTO
 }
 
 func (c *OrderController) UpdateStatus(dto dtos.UpdateOrderStatusDTO) (dtos.OrderResponseDTO, error) {
-	useCase := use_cases.NewUpdateOrderStatusUseCase(&c.orderGateway, &c.orderStatusGateway)
+	useCase := use_cases.NewUpdateOrderStatusUseCase(c.orderGateway, c.orderStatusGateway)
 	result, err := useCase.Execute(use_cases.UpdateOrderStatusDTO{
 		OrderID: dto.OrderID,
 		Status:  dto.Status,

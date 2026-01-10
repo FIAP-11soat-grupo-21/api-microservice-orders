@@ -114,7 +114,7 @@ func TestCreateOrderUseCase_Execute_Integration(t *testing.T) {
 	orderGateway := gateways.NewOrderGateway(orderDS)
 	statusGateway := gateways.NewOrderStatusGateway(statusDS)
 
-	uc := NewCreateOrderUseCase(*orderGateway, *statusGateway, broker)
+	uc := NewCreateOrderUseCase(orderGateway, statusGateway, broker)
 
 	customerID := "customer-123"
 	items := []dtos.CreateOrderItemDTO{
@@ -154,7 +154,7 @@ func TestCreateOrderUseCase_Execute_WithoutCustomerID_Integration(t *testing.T) 
 	orderGateway := gateways.NewOrderGateway(orderDS)
 	statusGateway := gateways.NewOrderStatusGateway(statusDS)
 
-	uc := NewCreateOrderUseCase(*orderGateway, *statusGateway, broker)
+	uc := NewCreateOrderUseCase(orderGateway, statusGateway, broker)
 
 	items := []dtos.CreateOrderItemDTO{
 		{ProductID: "product-1", Quantity: 1, Price: 15.0},
@@ -183,7 +183,7 @@ func TestCreateOrderUseCase_Execute_StatusNotFound_Integration(t *testing.T) {
 	orderGateway := gateways.NewOrderGateway(orderDS)
 	statusGateway := gateways.NewOrderStatusGateway(statusDS)
 
-	uc := NewCreateOrderUseCase(*orderGateway, *statusGateway, broker)
+	uc := NewCreateOrderUseCase(orderGateway, statusGateway, broker)
 
 	customerID := "customer-123"
 	items := []dtos.CreateOrderItemDTO{
@@ -221,7 +221,7 @@ func TestFindAllOrdersUseCase_Execute_Integration(t *testing.T) {
 
 	orderGateway := gateways.NewOrderGateway(orderDS)
 
-	uc := NewFindAllOrdersUseCase(*orderGateway)
+	uc := NewFindAllOrdersUseCase(orderGateway)
 
 	result, err := uc.Execute(dtos.OrderFilterDTO{})
 
@@ -239,7 +239,7 @@ func TestFindAllOrderStatusUseCase_Execute_Integration(t *testing.T) {
 
 	statusGateway := gateways.NewOrderStatusGateway(statusDS)
 
-	uc := NewFindAllOrderStatusUseCase(*statusGateway)
+	uc := NewFindAllOrderStatusUseCase(statusGateway)
 
 	result, err := uc.Execute()
 
@@ -283,7 +283,7 @@ func TestCreateOrderUseCase_Execute_DatabaseError_Integration(t *testing.T) {
 	orderGateway := gateways.NewOrderGateway(orderDS)
 	statusGateway := gateways.NewOrderStatusGateway(statusDS)
 
-	uc := NewCreateOrderUseCase(*orderGateway, *statusGateway, broker)
+	uc := NewCreateOrderUseCase(orderGateway, statusGateway, broker)
 
 	customerID := "customer-123"
 	items := []dtos.CreateOrderItemDTO{
@@ -302,16 +302,11 @@ func TestFindAllOrdersUseCase_Execute_DatabaseError_Integration(t *testing.T) {
 
 	orderGateway := gateways.NewOrderGateway(orderDS)
 
-	uc := NewFindAllOrdersUseCase(*orderGateway)
+	uc := NewFindAllOrdersUseCase(orderGateway)
 
 	_, err := uc.Execute(dtos.OrderFilterDTO{})
 
 	if err == nil {
 		t.Error("Expected error from database")
 	}
-}
-
-// Helper function
-func stringPtr(s string) *string {
-	return &s
 }

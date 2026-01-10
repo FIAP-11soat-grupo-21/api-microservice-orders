@@ -5,21 +5,21 @@ import (
 
 	"microservice/internal/adapters/brokers"
 	"microservice/internal/adapters/dtos"
-	"microservice/internal/adapters/gateways"
 	"microservice/internal/domain/entities"
 	"microservice/internal/domain/exceptions"
+	"microservice/internal/interfaces"
 	identityUtils "microservice/utils/identity"
 )
 
 const INITIAL_ORDER_STATUS_ID = "56d3b3c3-1801-49cd-bae7-972c78082012"
 
 type CreateOrderUseCase struct {
-	orderGateway       gateways.OrderGateway
-	orderStatusGateway gateways.OrderStatusGateway
+	orderGateway       interfaces.IOrderGateway
+	orderStatusGateway interfaces.IOrderStatusGateway
 	messageBroker      brokers.MessageBroker
 }
 
-func NewCreateOrderUseCase(orderGateway gateways.OrderGateway, orderStatusGateway gateways.OrderStatusGateway, messageBroker brokers.MessageBroker) *CreateOrderUseCase {
+func NewCreateOrderUseCase(orderGateway interfaces.IOrderGateway, orderStatusGateway interfaces.IOrderStatusGateway, messageBroker brokers.MessageBroker) *CreateOrderUseCase {
 	return &CreateOrderUseCase{
 		orderGateway:       orderGateway,
 		orderStatusGateway: orderStatusGateway,

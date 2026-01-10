@@ -1,15 +1,15 @@
 package use_cases
 
 import (
-	"microservice/internal/adapters/gateways"
 	"microservice/internal/domain/entities"
+	"microservice/internal/interfaces"
 )
 
 type FindAllOrderStatusUseCase struct {
-	orderStatusGateway gateways.OrderStatusGateway
+	orderStatusGateway interfaces.IOrderStatusGateway
 }
 
-func NewFindAllOrderStatusUseCase(orderStatusGateway gateways.OrderStatusGateway) *FindAllOrderStatusUseCase {
+func NewFindAllOrderStatusUseCase(orderStatusGateway interfaces.IOrderStatusGateway) *FindAllOrderStatusUseCase {
 	return &FindAllOrderStatusUseCase{
 		orderStatusGateway: orderStatusGateway,
 	}

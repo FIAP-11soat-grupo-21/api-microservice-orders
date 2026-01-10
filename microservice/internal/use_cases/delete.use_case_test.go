@@ -2,8 +2,8 @@ package use_cases
 
 import (
 	"testing"
+	"time"
 
-	"microservice/internal/adapters/gateways"
 	"microservice/internal/domain/entities"
 	"microservice/internal/domain/exceptions"
 )
@@ -57,8 +57,8 @@ func TestNewDeleteOrderUseCase(t *testing.T) {
 	_ = NewDeleteOrderUseCase
 }
 func TestDeleteOrderUseCase_NewDeleteOrderUseCase(t *testing.T) {
-	orderGateway := gateways.OrderGateway{}
-	uc := NewDeleteOrderUseCase(orderGateway)
+	mockGateway := NewMockOrderGateway()
+	uc := NewDeleteOrderUseCase(mockGateway)
 
 	if uc == nil {
 		t.Error("Expected use case to be created")
@@ -66,8 +66,8 @@ func TestDeleteOrderUseCase_NewDeleteOrderUseCase(t *testing.T) {
 }
 
 func TestDeleteOrderUseCase_Execute_InvalidID(t *testing.T) {
-	orderGateway := gateways.OrderGateway{}
-	uc := NewDeleteOrderUseCase(orderGateway)
+	mockGateway := NewMockOrderGateway()
+	uc := NewDeleteOrderUseCase(mockGateway)
 
 	err := uc.Execute("invalid-id")
 	if err == nil {
@@ -80,8 +80,8 @@ func TestDeleteOrderUseCase_Execute_InvalidID(t *testing.T) {
 }
 
 func TestDeleteOrderUseCase_Execute_EmptyID(t *testing.T) {
-	orderGateway := gateways.OrderGateway{}
-	uc := NewDeleteOrderUseCase(orderGateway)
+	mockGateway := NewMockOrderGateway()
+	uc := NewDeleteOrderUseCase(mockGateway)
 
 	err := uc.Execute("")
 	if err == nil {
@@ -99,12 +99,59 @@ func TestDeleteOrderUseCase_Execute_ValidIDFormat(t *testing.T) {
 
 // Comprehensive tests using mocks for full coverage
 
-func TestDeleteOrderUseCase_Execute_ValidInput(t *testing.T) {
-	// Test basic ID validation
+func TestDeleteOrderUseCase_Execute_Success(t *testing.T) {
+	mockGateway := NewMockOrderGateway()
+	uc := NewDeleteOrderUseCase(mockGateway)
+
+	// Create and add a test order
 	validID := "550e8400-e29b-41d4-a716-446655440000"
-	err := entities.ValidateID(validID)
+	customerID := "customer-123"
+	status, _ := entities.NewOrderStatus("pending", "Pending")
+	order, _ := entities.NewOrderWithItems(validID, &customerID, 25.0, *status, []entities.OrderItem{}, time.Now(), nil)
+	mockGateway.AddOrder(order)
+
+	err := uc.Execute(validID)
 	if err != nil {
-		t.Errorf("Expected no error for valid UUID, got %v", err)
+		t.Errorf("Expected no error for successful delete, got %v", err)
+	}
+
+	// Verify order was deleted
+	_, err = mockGateway.FindByID(validID)
+	if err == nil {
+		t.Error("Expected order to be deleted")
+	}
+}
+
+func TestDeleteOrderUseCase_Execute_OrderNotFound(t *testing.T) {
+	mockGateway := NewMockOrderGateway()
+	uc := NewDeleteOrderUseCase(mockGateway)
+
+	validID := "550e8400-e29b-41d4-a716-446655440000"
+	
+	err := uc.Execute(validID)
+	if err == nil {
+		t.Error("Expected error when order not found")
+	}
+
+	if _, ok := err.(*exceptions.OrderNotFoundException); !ok {
+		t.Errorf("Expected OrderNotFoundException, got %T", err)
+	}
+}
+
+func TestDeleteOrderUseCase_Execute_GatewayFindError(t *testing.T) {
+	mockGateway := NewMockOrderGateway()
+	mockGateway.SetShouldFailFindByID(true)
+	uc := NewDeleteOrderUseCase(mockGateway)
+
+	validID := "550e8400-e29b-41d4-a716-446655440000"
+	
+	err := uc.Execute(validID)
+	if err == nil {
+		t.Error("Expected error when gateway fails")
+	}
+
+	if _, ok := err.(*exceptions.OrderNotFoundException); !ok {
+		t.Errorf("Expected OrderNotFoundException, got %T", err)
 	}
 }
 

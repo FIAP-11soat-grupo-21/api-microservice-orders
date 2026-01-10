@@ -595,7 +595,7 @@ func TestProcessPaymentConfirmationUseCase_updateOrder_StatusNotFound(t *testing
 	assert.IsType(t, &exceptions.OrderStatusNotFoundException{}, err)
 }
 
-func TestProcessPaymentConfirmationUseCase_updateOrder_UpdateFails(t *testing.T) {
+func TestProcessPaymentConfirmationUseCase_Execute_Success_Confirmed(t *testing.T) {
 	mockOrderGateway := NewMockOrderGateway()
 	mockStatusGateway := NewMockOrderStatusGateway()
 
@@ -606,17 +606,145 @@ func TestProcessPaymentConfirmationUseCase_updateOrder_UpdateFails(t *testing.T)
 	paidStatus, _ := entities.NewOrderStatus("paid", "Paid")
 
 	mockOrderGateway.AddOrder(order)
-	mockOrderGateway.SetShouldFailUpdate(true)
 	mockStatusGateway.AddStatus(paidStatus)
 
 	uc := NewProcessPaymentConfirmationUseCase(mockOrderGateway, mockStatusGateway)
 
-	dto := dtos.UpdateOrderDTO{
-		ID:       "order-1",
-		StatusID: "paid",
+	dto := PaymentConfirmationDTO{
+		OrderID:   "order-1",
+		PaymentID: "payment-1",
+		Status:    "confirmed",
+		Amount:    25.0,
 	}
 
-	_, err := uc.updateOrder(dto)
+	result, err := uc.Execute(dto)
 
-	assert.Error(t, err)
+	assert.NoError(t, err)
+	assert.NotNil(t, result)
+	assert.True(t, result.StatusChanged)
+	assert.True(t, result.ShouldNotifyKitchen)
+	assert.Equal(t, "paid", result.Order.Status.ID)
+	assert.Contains(t, result.Message, "marked as paid")
+}
+
+func TestProcessPaymentConfirmationUseCase_Execute_Success_Failed(t *testing.T) {
+	mockOrderGateway := NewMockOrderGateway()
+	mockStatusGateway := NewMockOrderStatusGateway()
+
+	customerID := "customer-1"
+	pendingStatus, _ := entities.NewOrderStatus("pending", "pending")
+	order, _ := entities.NewOrderWithItems("order-1", &customerID, 25.0, *pendingStatus, []entities.OrderItem{}, time.Now(), nil)
+
+	failedStatus, _ := entities.NewOrderStatus("failed", "Failed")
+
+	mockOrderGateway.AddOrder(order)
+	mockStatusGateway.AddStatus(failedStatus)
+
+	uc := NewProcessPaymentConfirmationUseCase(mockOrderGateway, mockStatusGateway)
+
+	dto := PaymentConfirmationDTO{
+		OrderID:   "order-1",
+		PaymentID: "payment-1",
+		Status:    "failed",
+		Amount:    25.0,
+	}
+
+	result, err := uc.Execute(dto)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, result)
+	assert.True(t, result.StatusChanged)
+	assert.False(t, result.ShouldNotifyKitchen)
+	assert.Equal(t, "failed", result.Order.Status.ID)
+	assert.Contains(t, result.Message, "marked as failed")
+}
+
+func TestProcessPaymentConfirmationUseCase_Execute_Success_Cancelled(t *testing.T) {
+	mockOrderGateway := NewMockOrderGateway()
+	mockStatusGateway := NewMockOrderStatusGateway()
+
+	customerID := "customer-1"
+	pendingStatus, _ := entities.NewOrderStatus("pending", "pending")
+	order, _ := entities.NewOrderWithItems("order-1", &customerID, 25.0, *pendingStatus, []entities.OrderItem{}, time.Now(), nil)
+
+	failedStatus, _ := entities.NewOrderStatus("failed", "Failed")
+
+	mockOrderGateway.AddOrder(order)
+	mockStatusGateway.AddStatus(failedStatus)
+
+	uc := NewProcessPaymentConfirmationUseCase(mockOrderGateway, mockStatusGateway)
+
+	dto := PaymentConfirmationDTO{
+		OrderID:   "order-1",
+		PaymentID: "payment-1",
+		Status:    "cancelled",
+		Amount:    25.0,
+	}
+
+	result, err := uc.Execute(dto)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, result)
+	assert.True(t, result.StatusChanged)
+	assert.False(t, result.ShouldNotifyKitchen)
+	assert.Equal(t, "failed", result.Order.Status.ID)
+	assert.Contains(t, result.Message, "marked as failed")
+}
+
+func TestProcessPaymentConfirmationUseCase_Execute_UnknownStatus(t *testing.T) {
+	mockOrderGateway := NewMockOrderGateway()
+	mockStatusGateway := NewMockOrderStatusGateway()
+
+	customerID := "customer-1"
+	pendingStatus, _ := entities.NewOrderStatus("pending", "pending")
+	order, _ := entities.NewOrderWithItems("order-1", &customerID, 25.0, *pendingStatus, []entities.OrderItem{}, time.Now(), nil)
+
+	mockOrderGateway.AddOrder(order)
+
+	uc := NewProcessPaymentConfirmationUseCase(mockOrderGateway, mockStatusGateway)
+
+	dto := PaymentConfirmationDTO{
+		OrderID:   "order-1",
+		PaymentID: "payment-1",
+		Status:    "unknown-status",
+		Amount:    25.0,
+	}
+
+	result, err := uc.Execute(dto)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, result)
+	assert.False(t, result.StatusChanged)
+	assert.False(t, result.ShouldNotifyKitchen)
+	assert.Equal(t, "pending", result.Order.Status.ID)
+	assert.Contains(t, result.Message, "cannot be updated")
+}
+
+func TestProcessPaymentConfirmationUseCase_Execute_CannotUpdateStatus(t *testing.T) {
+	mockOrderGateway := NewMockOrderGateway()
+	mockStatusGateway := NewMockOrderStatusGateway()
+
+	customerID := "customer-1"
+	paidStatus, _ := entities.NewOrderStatus("paid", "paid")
+	order, _ := entities.NewOrderWithItems("order-1", &customerID, 25.0, *paidStatus, []entities.OrderItem{}, time.Now(), nil)
+
+	mockOrderGateway.AddOrder(order)
+
+	uc := NewProcessPaymentConfirmationUseCase(mockOrderGateway, mockStatusGateway)
+
+	dto := PaymentConfirmationDTO{
+		OrderID:   "order-1",
+		PaymentID: "payment-1",
+		Status:    "confirmed",
+		Amount:    25.0,
+	}
+
+	result, err := uc.Execute(dto)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, result)
+	assert.False(t, result.StatusChanged)
+	assert.False(t, result.ShouldNotifyKitchen)
+	assert.Equal(t, "paid", result.Order.Status.ID)
+	assert.Contains(t, result.Message, "cannot be updated")
 }

@@ -2,8 +2,8 @@ package use_cases
 
 import (
 	"testing"
+	"time"
 
-	"microservice/internal/adapters/gateways"
 	"microservice/internal/domain/entities"
 	"microservice/internal/domain/exceptions"
 )
@@ -63,8 +63,8 @@ func TestNewFindOrderByIDUseCase(t *testing.T) {
 	_ = NewFindOrderByIDUseCase
 }
 func TestFindOrderByIDUseCase_NewFindOrderByIDUseCase(t *testing.T) {
-	orderGateway := gateways.OrderGateway{}
-	uc := NewFindOrderByIDUseCase(orderGateway)
+	mockGateway := NewMockOrderGateway()
+	uc := NewFindOrderByIDUseCase(mockGateway)
 
 	if uc == nil {
 		t.Error("Expected use case to be created")
@@ -72,8 +72,8 @@ func TestFindOrderByIDUseCase_NewFindOrderByIDUseCase(t *testing.T) {
 }
 
 func TestFindOrderByIDUseCase_Execute_InvalidID(t *testing.T) {
-	orderGateway := gateways.OrderGateway{}
-	uc := NewFindOrderByIDUseCase(orderGateway)
+	mockGateway := NewMockOrderGateway()
+	uc := NewFindOrderByIDUseCase(mockGateway)
 
 	_, err := uc.Execute("invalid-id")
 	if err == nil {
@@ -86,8 +86,8 @@ func TestFindOrderByIDUseCase_Execute_InvalidID(t *testing.T) {
 }
 
 func TestFindOrderByIDUseCase_Execute_EmptyID(t *testing.T) {
-	orderGateway := gateways.OrderGateway{}
-	uc := NewFindOrderByIDUseCase(orderGateway)
+	mockGateway := NewMockOrderGateway()
+	uc := NewFindOrderByIDUseCase(mockGateway)
 
 	_, err := uc.Execute("")
 	if err == nil {
@@ -104,8 +104,8 @@ func TestFindOrderByIDUseCase_Execute_ValidIDFormat(t *testing.T) {
 }
 
 func TestFindOrderByIDUseCase_Execute_ReturnsEmptyOrderOnError(t *testing.T) {
-	orderGateway := gateways.OrderGateway{}
-	uc := NewFindOrderByIDUseCase(orderGateway)
+	mockGateway := NewMockOrderGateway()
+	uc := NewFindOrderByIDUseCase(mockGateway)
 
 	order, err := uc.Execute("invalid-id")
 	if err == nil {
@@ -117,11 +117,71 @@ func TestFindOrderByIDUseCase_Execute_ReturnsEmptyOrderOnError(t *testing.T) {
 	}
 }
 
-func TestFindOrderByIDUseCase_Execute_ValidInput(t *testing.T) {
+// Comprehensive tests using mocks for full coverage
+
+func TestFindOrderByIDUseCase_Execute_Success(t *testing.T) {
+	mockGateway := NewMockOrderGateway()
+	uc := NewFindOrderByIDUseCase(mockGateway)
+
+	// Create and add a test order
 	validID := "550e8400-e29b-41d4-a716-446655440000"
-	err := entities.ValidateID(validID)
+	customerID := "customer-123"
+	status, _ := entities.NewOrderStatus("pending", "Pending")
+	expectedOrder, _ := entities.NewOrderWithItems(validID, &customerID, 25.0, *status, []entities.OrderItem{}, time.Now(), nil)
+	mockGateway.AddOrder(expectedOrder)
+
+	order, err := uc.Execute(validID)
 	if err != nil {
-		t.Errorf("Expected no error for valid UUID, got %v", err)
+		t.Errorf("Expected no error for successful find, got %v", err)
+	}
+
+	if order.ID != validID {
+		t.Errorf("Expected order ID %s, got %s", validID, order.ID)
+	}
+
+	if order.IsEmpty() {
+		t.Error("Expected non-empty order")
+	}
+}
+
+func TestFindOrderByIDUseCase_Execute_OrderNotFound(t *testing.T) {
+	mockGateway := NewMockOrderGateway()
+	uc := NewFindOrderByIDUseCase(mockGateway)
+
+	validID := "550e8400-e29b-41d4-a716-446655440000"
+	
+	order, err := uc.Execute(validID)
+	if err == nil {
+		t.Error("Expected error when order not found")
+	}
+
+	if _, ok := err.(*exceptions.OrderNotFoundException); !ok {
+		t.Errorf("Expected OrderNotFoundException, got %T", err)
+	}
+
+	if !order.IsEmpty() {
+		t.Error("Expected empty order when not found")
+	}
+}
+
+func TestFindOrderByIDUseCase_Execute_GatewayError(t *testing.T) {
+	mockGateway := NewMockOrderGateway()
+	mockGateway.SetShouldFailFindByID(true)
+	uc := NewFindOrderByIDUseCase(mockGateway)
+
+	validID := "550e8400-e29b-41d4-a716-446655440000"
+	
+	order, err := uc.Execute(validID)
+	if err == nil {
+		t.Error("Expected error when gateway fails")
+	}
+
+	if _, ok := err.(*exceptions.OrderNotFoundException); !ok {
+		t.Errorf("Expected OrderNotFoundException, got %T", err)
+	}
+
+	if !order.IsEmpty() {
+		t.Error("Expected empty order on gateway error")
 	}
 }
 

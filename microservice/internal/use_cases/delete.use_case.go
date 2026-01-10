@@ -1,16 +1,16 @@
 package use_cases
 
 import (
-	"microservice/internal/adapters/gateways"
 	"microservice/internal/domain/entities"
 	"microservice/internal/domain/exceptions"
+	"microservice/internal/interfaces"
 )
 
 type DeleteOrderUseCase struct {
-	orderGateway gateways.OrderGateway
+	orderGateway interfaces.IOrderGateway
 }
 
-func NewDeleteOrderUseCase(orderGateway gateways.OrderGateway) *DeleteOrderUseCase {
+func NewDeleteOrderUseCase(orderGateway interfaces.IOrderGateway) *DeleteOrderUseCase {
 	return &DeleteOrderUseCase{
 		orderGateway: orderGateway,
 	}
