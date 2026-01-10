@@ -54,11 +54,9 @@ func (m *MockOrderStatusDataSource) FindByName(name string) (daos.OrderStatusDAO
 	return args.Get(0).(daos.OrderStatusDAO), args.Error(1)
 }
 
-func (m *mockOrderStatusDataSource) FindByName(name string) (daos.OrderStatusDAO, error) {
-	if m.findByNameFunc != nil {
-		return m.findByNameFunc(name)
-	}
-	return daos.OrderStatusDAO{}, nil
+func (m *MockOrderStatusDataSource) FindByName(name string) (daos.OrderStatusDAO, error) {
+	args := m.Called(name)
+	return args.Get(0).(daos.OrderStatusDAO), args.Error(1)
 }
 
 func (m *MockOrderStatusDataSource) FindAll() ([]daos.OrderStatusDAO, error) {
@@ -66,7 +64,9 @@ func (m *MockOrderStatusDataSource) FindAll() ([]daos.OrderStatusDAO, error) {
 	return args.Get(0).([]daos.OrderStatusDAO), args.Error(1)
 }
 
-type mockMessageBroker struct{}
+type MockMessageBroker struct {
+	mock.Mock
+}
 
 func (m *mockMessageBroker) SendToKitchen(message map[string]interface{}) error {
 	return nil
