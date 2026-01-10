@@ -1,8 +1,12 @@
 package brokers
 
 import (
+	"context"
+	"errors"
 	"testing"
+	"time"
 
+	"github.com/streadway/amqp"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -166,3 +170,184 @@ func TestRabbitMQBroker_shouldDiscardMessage_NonRecoverableErrors(t *testing.T) 
 		})
 	}
 }
+func TestRabbitMQBroker_ConsumeOrderUpdates_Integration(t *testing.T) {
+	config := BrokerConfig{
+		RabbitMQURL:         "amqp://localhost:5672",
+		RabbitMQOrdersQueue: "test-orders-queue",
+	}
+
+	broker, err := NewRabbitMQBroker(config)
+	if err != nil {
+		t.Skipf("Skipping RabbitMQ integration test - RabbitMQ not available: %v", err)
+		return
+	}
+	defer broker.Close()
+
+	// Test ConsumeOrderUpdates method
+	ctx := context.Background()
+	handler := func(message OrderUpdateMessage) error {
+		return nil
+	}
+
+	// This should not block in test environment
+	go func() {
+		err := broker.ConsumeOrderUpdates(ctx, handler)
+		if err != nil {
+			t.Logf("ConsumeOrderUpdates error (expected in test): %v", err)
+		}
+	}()
+
+	// Give it a moment to start
+	time.Sleep(100 * time.Millisecond)
+}
+
+func TestRabbitMQBroker_processOrderUpdateMessage_ValidJSON(t *testing.T) {
+	broker := &RabbitMQBroker{}
+
+	// Create a mock amqp.Delivery
+	validJSON := `{"order_id": "order-123", "status": "Em preparação"}`
+	mockDelivery := amqp.Delivery{
+		Body: []byte(validJSON),
+	}
+	
+	handlerCalled := false
+	handler := func(message OrderUpdateMessage) error {
+		handlerCalled = true
+		assert.Equal(t, "order-123", message.OrderID)
+		assert.Equal(t, "Em preparação", message.Status)
+		return nil
+	}
+
+	err := broker.processOrderUpdateMessage(mockDelivery, handler)
+	assert.NoError(t, err)
+	assert.True(t, handlerCalled)
+}
+
+func TestRabbitMQBroker_processOrderUpdateMessage_InvalidJSON(t *testing.T) {
+	broker := &RabbitMQBroker{}
+
+	// Create a mock amqp.Delivery with invalid JSON
+	invalidJSON := `{"invalid": json}`
+	mockDelivery := amqp.Delivery{
+		Body: []byte(invalidJSON),
+	}
+	
+	handler := func(message OrderUpdateMessage) error {
+		t.Error("Handler should not be called for invalid JSON")
+		return nil
+	}
+
+	err := broker.processOrderUpdateMessage(mockDelivery, handler)
+	assert.Error(t, err)
+}
+
+func TestRabbitMQBroker_processOrderUpdateMessage_HandlerError(t *testing.T) {
+	broker := &RabbitMQBroker{}
+
+	// Create a mock amqp.Delivery
+	validJSON := `{"order_id": "order-123", "status": "Em preparação"}`
+	mockDelivery := amqp.Delivery{
+		Body: []byte(validJSON),
+	}
+	
+	expectedError := errors.New("handler error")
+	handler := func(message OrderUpdateMessage) error {
+		return expectedError
+	}
+
+	err := broker.processOrderUpdateMessage(mockDelivery, handler)
+	assert.Error(t, err)
+	assert.Equal(t, expectedError, err)
+}
+
+func TestRabbitMQBroker_declareQueues_Coverage(t *testing.T) {
+	config := BrokerConfig{
+		RabbitMQURL:         "amqp://localhost:5672",
+		RabbitMQOrdersQueue: "test-orders-queue",
+	}
+
+	broker, err := NewRabbitMQBroker(config)
+	if err != nil {
+		t.Skipf("Skipping RabbitMQ test - RabbitMQ not available: %v", err)
+		return
+	}
+	defer broker.Close()
+
+	// The declareQueues method is called during NewRabbitMQBroker
+	// This test ensures it was called successfully
+	assert.NotNil(t, broker.channel)
+	assert.Equal(t, "test-orders-queue", broker.ordersQueue)
+}
+
+func TestRabbitMQBroker_ConsumeOrderUpdates_ContextCancellation(t *testing.T) {
+	config := BrokerConfig{
+		RabbitMQURL:         "amqp://localhost:5672",
+		RabbitMQOrdersQueue: "test-orders-queue",
+	}
+
+	broker, err := NewRabbitMQBroker(config)
+	if err != nil {
+		t.Skipf("Skipping RabbitMQ test - RabbitMQ not available: %v", err)
+		return
+	}
+	defer broker.Close()
+
+	// Test context cancellation
+	ctx, cancel := context.WithCancel(context.Background())
+	
+	handler := func(message OrderUpdateMessage) error {
+		return nil
+	}
+
+	// Start consuming in goroutine
+	done := make(chan error, 1)
+	go func() {
+		done <- broker.ConsumeOrderUpdates(ctx, handler)
+	}()
+
+	// Cancel context after a short delay
+	time.Sleep(50 * time.Millisecond)
+	cancel()
+
+	// Wait for consumption to stop
+	select {
+	case err := <-done:
+		// Should return due to context cancellation
+		if err != nil && err != context.Canceled {
+			t.Logf("ConsumeOrderUpdates returned error: %v", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Error("ConsumeOrderUpdates did not stop after context cancellation")
+	}
+}
+
+func TestRabbitMQBroker_Close_WithNilChannel(t *testing.T) {
+	// Create a broker with nil channel to test Close method
+	broker := &RabbitMQBroker{
+		conn:        nil,
+		channel:     nil,
+		ordersQueue: "test-queue",
+	}
+
+	// Should not panic with nil channel
+	err := broker.Close()
+	assert.NoError(t, err)
+}
+
+func TestRabbitMQBroker_Close_WithValidChannel(t *testing.T) {
+	config := BrokerConfig{
+		RabbitMQURL:         "amqp://localhost:5672",
+		RabbitMQOrdersQueue: "test-orders-queue",
+	}
+
+	broker, err := NewRabbitMQBroker(config)
+	if err != nil {
+		t.Skipf("Skipping RabbitMQ test - RabbitMQ not available: %v", err)
+		return
+	}
+
+	// Close should work without error
+	err = broker.Close()
+	assert.NoError(t, err)
+}
+
