@@ -3,427 +3,471 @@ package controllers
 import (
 	"context"
 	"errors"
-	"testing"
-
 	"microservice/internal/adapters/brokers"
 	"microservice/internal/adapters/daos"
 	"microservice/internal/adapters/dtos"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
-type mockOrderDataSource struct {
-	createFunc   func(order daos.OrderDAO) error
-	findAllFunc  func(filter dtos.OrderFilterDTO) ([]daos.OrderDAO, error)
-	findByIDFunc func(id string) (daos.OrderDAO, error)
-	updateFunc   func(order daos.OrderDAO) error
-	deleteFunc   func(id string) error
+// Mock implementations
+type MockOrderDataSource struct {
+	mock.Mock
 }
 
-func (m *mockOrderDataSource) Create(order daos.OrderDAO) error {
-	if m.createFunc != nil {
-		return m.createFunc(order)
-	}
-	return nil
+func (m *MockOrderDataSource) Create(order daos.OrderDAO) error {
+	args := m.Called(order)
+	return args.Error(0)
 }
 
-func (m *mockOrderDataSource) FindAll(filter dtos.OrderFilterDTO) ([]daos.OrderDAO, error) {
-	if m.findAllFunc != nil {
-		return m.findAllFunc(filter)
-	}
-	return []daos.OrderDAO{}, nil
+func (m *MockOrderDataSource) FindAll(filter dtos.OrderFilterDTO) ([]daos.OrderDAO, error) {
+	args := m.Called(filter)
+	return args.Get(0).([]daos.OrderDAO), args.Error(1)
 }
 
-func (m *mockOrderDataSource) FindByID(id string) (daos.OrderDAO, error) {
-	if m.findByIDFunc != nil {
-		return m.findByIDFunc(id)
-	}
-	return daos.OrderDAO{}, nil
+func (m *MockOrderDataSource) FindByID(id string) (daos.OrderDAO, error) {
+	args := m.Called(id)
+	return args.Get(0).(daos.OrderDAO), args.Error(1)
 }
 
-func (m *mockOrderDataSource) Update(order daos.OrderDAO) error {
-	if m.updateFunc != nil {
-		return m.updateFunc(order)
-	}
-	return nil
+func (m *MockOrderDataSource) Update(order daos.OrderDAO) error {
+	args := m.Called(order)
+	return args.Error(0)
 }
 
-func (m *mockOrderDataSource) Delete(id string) error {
-	if m.deleteFunc != nil {
-		return m.deleteFunc(id)
-	}
-	return nil
+func (m *MockOrderDataSource) Delete(id string) error {
+	args := m.Called(id)
+	return args.Error(0)
 }
 
-type mockOrderStatusDataSource struct {
-	findByIDFunc   func(id string) (daos.OrderStatusDAO, error)
-	findByNameFunc func(name string) (daos.OrderStatusDAO, error)
-	findAllFunc    func() ([]daos.OrderStatusDAO, error)
+type MockOrderStatusDataSource struct {
+	mock.Mock
 }
 
-func (m *mockOrderStatusDataSource) FindByID(id string) (daos.OrderStatusDAO, error) {
-	if m.findByIDFunc != nil {
-		return m.findByIDFunc(id)
-	}
-	return daos.OrderStatusDAO{}, nil
+func (m *MockOrderStatusDataSource) FindByID(id string) (daos.OrderStatusDAO, error) {
+	args := m.Called(id)
+	return args.Get(0).(daos.OrderStatusDAO), args.Error(1)
 }
 
-func (m *mockOrderStatusDataSource) FindByName(name string) (daos.OrderStatusDAO, error) {
-	if m.findByNameFunc != nil {
-		return m.findByNameFunc(name)
-	}
-	return daos.OrderStatusDAO{}, nil
+func (m *MockOrderStatusDataSource) FindByName(name string) (daos.OrderStatusDAO, error) {
+	args := m.Called(name)
+	return args.Get(0).(daos.OrderStatusDAO), args.Error(1)
 }
 
-func (m *mockOrderStatusDataSource) FindAll() ([]daos.OrderStatusDAO, error) {
-	if m.findAllFunc != nil {
-		return m.findAllFunc()
-	}
-	return []daos.OrderStatusDAO{}, nil
+func (m *MockOrderStatusDataSource) FindAll() ([]daos.OrderStatusDAO, error) {
+	args := m.Called()
+	return args.Get(0).([]daos.OrderStatusDAO), args.Error(1)
 }
 
-type mockMessageBroker struct{}
-
-func (m *mockMessageBroker) ConsumeOrderUpdates(ctx context.Context, handler brokers.OrderUpdateHandler) error {
-	return nil
+type MockMessageBroker struct {
+	mock.Mock
 }
 
-func (m *mockMessageBroker) Close() error {
-	return nil
+func (m *MockMessageBroker) ConsumeOrderUpdates(ctx context.Context, handler brokers.OrderUpdateHandler) error {
+	args := m.Called(ctx, handler)
+	return args.Error(0)
+}
+
+func (m *MockMessageBroker) Close() error {
+	args := m.Called()
+	return args.Error(0)
 }
 
 func TestNewOrderController(t *testing.T) {
-	orderDS := &mockOrderDataSource{}
-	statusDS := &mockOrderStatusDataSource{}
-	broker := &mockMessageBroker{}
+	mockOrderDS := &MockOrderDataSource{}
+	mockOrderStatusDS := &MockOrderStatusDataSource{}
+	mockBroker := &MockMessageBroker{}
 
-	controller := NewOrderController(orderDS, statusDS, broker)
+	controller := NewOrderController(mockOrderDS, mockOrderStatusDS, mockBroker)
 
-	if controller == nil {
-		t.Error("NewOrderController() returned nil")
-	}
+	assert.NotNil(t, controller)
+	assert.Equal(t, mockOrderDS, controller.orderDataSource)
+	assert.Equal(t, mockOrderStatusDS, controller.orderStatusDataSource)
+	assert.Equal(t, mockBroker, controller.messageBroker)
+	assert.NotNil(t, controller.orderGateway)
+	assert.NotNil(t, controller.orderStatusGateway)
 }
 
 func TestOrderController_Create_Success(t *testing.T) {
-	orderDS := &mockOrderDataSource{
-		createFunc: func(order daos.OrderDAO) error {
-			return nil
-		},
-	}
-	statusDS := &mockOrderStatusDataSource{
-		findByIDFunc: func(id string) (daos.OrderStatusDAO, error) {
-			return daos.OrderStatusDAO{ID: "status-1", Name: "Pending"}, nil
-		},
-	}
-	broker := &mockMessageBroker{}
+	mockOrderDS := &MockOrderDataSource{}
+	mockOrderStatusDS := &MockOrderStatusDataSource{}
+	mockBroker := &MockMessageBroker{}
 
-	controller := NewOrderController(orderDS, statusDS, broker)
+	controller := NewOrderController(mockOrderDS, mockOrderStatusDS, mockBroker)
 
-	dto := dtos.CreateOrderDTO{
-		CustomerID: stringPtr("customer-1"),
+	customerID := "customer-123"
+	createDTO := dtos.CreateOrderDTO{
+		CustomerID: &customerID,
 		Items: []dtos.CreateOrderItemDTO{
-			{ProductID: "product-1", Quantity: 2, Price: 10.0},
+			{
+				ProductID: "product-1",
+				Quantity:  2,
+				Price:     10.50,
+			},
 		},
 	}
 
-	result, err := controller.Create(dto)
+	// Mock expectations
+	mockOrderStatusDS.On("FindByID", "56d3b3c3-1801-49cd-bae7-972c78082012").Return(daos.OrderStatusDAO{
+		ID:   "56d3b3c3-1801-49cd-bae7-972c78082012",
+		Name: "PENDING",
+	}, nil)
 
-	if err != nil {
-		t.Errorf("Expected no error, got %v", err)
-	}
+	mockOrderDS.On("Create", mock.AnythingOfType("daos.OrderDAO")).Return(nil)
 
-	if result.ID == "" {
-		t.Error("Expected order ID to be set")
-	}
+	result, err := controller.Create(createDTO)
+
+	assert.NoError(t, err)
+	assert.NotEmpty(t, result.ID)
+	assert.Equal(t, customerID, *result.CustomerID)
+	assert.Equal(t, float64(21), result.Amount) // 2 * 10.50
+	assert.Equal(t, "PENDING", result.Status.Name)
+	assert.Len(t, result.Items, 1)
+
+	mockOrderDS.AssertExpectations(t)
+	mockOrderStatusDS.AssertExpectations(t)
 }
 
-func TestOrderController_Create_StatusNotFound(t *testing.T) {
-	orderDS := &mockOrderDataSource{}
-	statusDS := &mockOrderStatusDataSource{
-		findByIDFunc: func(id string) (daos.OrderStatusDAO, error) {
-			return daos.OrderStatusDAO{}, errors.New("not found")
-		},
-	}
-	broker := &mockMessageBroker{}
+func TestOrderController_Create_Error(t *testing.T) {
+	mockOrderDS := &MockOrderDataSource{}
+	mockOrderStatusDS := &MockOrderStatusDataSource{}
+	mockBroker := &MockMessageBroker{}
 
-	controller := NewOrderController(orderDS, statusDS, broker)
+	controller := NewOrderController(mockOrderDS, mockOrderStatusDS, mockBroker)
 
-	dto := dtos.CreateOrderDTO{
-		CustomerID: stringPtr("customer-1"),
+	customerID := "customer-123"
+	createDTO := dtos.CreateOrderDTO{
+		CustomerID: &customerID,
 		Items: []dtos.CreateOrderItemDTO{
-			{ProductID: "product-1", Quantity: 2, Price: 10.0},
+			{
+				ProductID: "product-1",
+				Quantity:  2,
+				Price:     10.50,
+			},
 		},
 	}
 
-	_, err := controller.Create(dto)
+	// Mock expectations - simulate error
+	mockOrderStatusDS.On("FindByID", "56d3b3c3-1801-49cd-bae7-972c78082012").Return(daos.OrderStatusDAO{}, errors.New("status not found"))
 
-	if err == nil {
-		t.Error("Expected error when status not found")
-	}
+	result, err := controller.Create(createDTO)
+
+	assert.Error(t, err)
+	assert.Equal(t, dtos.OrderResponseDTO{}, result)
+	assert.Contains(t, err.Error(), "Order Status not found")
+
+	mockOrderStatusDS.AssertExpectations(t)
 }
 
 func TestOrderController_FindAll_Success(t *testing.T) {
-	orderDS := &mockOrderDataSource{
-		findAllFunc: func(filter dtos.OrderFilterDTO) ([]daos.OrderDAO, error) {
-			return []daos.OrderDAO{
+	mockOrderDS := &MockOrderDataSource{}
+	mockOrderStatusDS := &MockOrderStatusDataSource{}
+	mockBroker := &MockMessageBroker{}
+
+	controller := NewOrderController(mockOrderDS, mockOrderStatusDS, mockBroker)
+
+	filter := dtos.OrderFilterDTO{}
+	now := time.Now()
+
+	mockOrders := []daos.OrderDAO{
+		{
+			ID:         "order-1",
+			CustomerID: stringPtr("customer-1"),
+			Amount:     25.50,
+			Status: daos.OrderStatusDAO{
+				ID:   "status-1",
+				Name: "PENDING",
+			},
+			CreatedAt: now,
+			Items: []daos.OrderItemDAO{
 				{
-					ID:         "550e8400-e29b-41d4-a716-446655440000",
-					CustomerID: stringPtr("customer-1"),
-					Amount:     25.0,
-					Status: daos.OrderStatusDAO{
-						ID:   "status-1",
-						Name: "Pending",
-					},
-					Items: []daos.OrderItemDAO{
-						{
-							ID:        "item-1",
-							OrderID:   "550e8400-e29b-41d4-a716-446655440000",
-							ProductID: "product-1",
-							Quantity:  1,
-							UnitPrice: 25.0,
-						},
-					},
+					ID:        "item-1",
+					ProductID: "product-1",
+					OrderID:   "order-1",
+					Quantity:  2,
+					UnitPrice: 12.75,
 				},
-			}, nil
+			},
 		},
 	}
-	statusDS := &mockOrderStatusDataSource{}
-	broker := &mockMessageBroker{}
 
-	controller := NewOrderController(orderDS, statusDS, broker)
+	mockOrderDS.On("FindAll", filter).Return(mockOrders, nil)
 
-	result, err := controller.FindAll(dtos.OrderFilterDTO{})
+	result, err := controller.FindAll(filter)
 
-	if err != nil {
-		t.Errorf("Expected no error, got %v", err)
-	}
+	assert.NoError(t, err)
+	assert.Len(t, result, 1)
+	assert.Equal(t, "order-1", result[0].ID)
+	assert.Equal(t, "customer-1", *result[0].CustomerID)
+	assert.Equal(t, float64(25.50), result[0].Amount)
+	assert.Equal(t, "PENDING", result[0].Status.Name)
 
-	if len(result) != 1 {
-		t.Errorf("Expected 1 order, got %d", len(result))
-	}
+	mockOrderDS.AssertExpectations(t)
 }
 
 func TestOrderController_FindAll_Error(t *testing.T) {
-	orderDS := &mockOrderDataSource{
-		findAllFunc: func(filter dtos.OrderFilterDTO) ([]daos.OrderDAO, error) {
-			return nil, errors.New("database error")
-		},
-	}
-	statusDS := &mockOrderStatusDataSource{}
-	broker := &mockMessageBroker{}
+	mockOrderDS := &MockOrderDataSource{}
+	mockOrderStatusDS := &MockOrderStatusDataSource{}
+	mockBroker := &MockMessageBroker{}
 
-	controller := NewOrderController(orderDS, statusDS, broker)
+	controller := NewOrderController(mockOrderDS, mockOrderStatusDS, mockBroker)
 
-	_, err := controller.FindAll(dtos.OrderFilterDTO{})
+	filter := dtos.OrderFilterDTO{}
 
-	if err == nil {
-		t.Error("Expected error from database")
-	}
+	mockOrderDS.On("FindAll", filter).Return([]daos.OrderDAO{}, errors.New("database error"))
+
+	result, err := controller.FindAll(filter)
+
+	assert.Error(t, err)
+	assert.Nil(t, result)
+	assert.Contains(t, err.Error(), "database error")
+
+	mockOrderDS.AssertExpectations(t)
 }
 
 func TestOrderController_FindByID_Success(t *testing.T) {
-	orderDS := &mockOrderDataSource{
-		findByIDFunc: func(id string) (daos.OrderDAO, error) {
-			return daos.OrderDAO{
-				ID:         "550e8400-e29b-41d4-a716-446655440000",
-				CustomerID: stringPtr("customer-1"),
-				Amount:     25.0,
-				Status: daos.OrderStatusDAO{
-					ID:   "status-1",
-					Name: "Pending",
-				},
-				Items: []daos.OrderItemDAO{
-					{
-						ID:        "item-1",
-						OrderID:   "550e8400-e29b-41d4-a716-446655440000",
-						ProductID: "product-1",
-						Quantity:  1,
-						UnitPrice: 25.0,
-					},
-				},
-			}, nil
+	mockOrderDS := &MockOrderDataSource{}
+	mockOrderStatusDS := &MockOrderStatusDataSource{}
+	mockBroker := &MockMessageBroker{}
+
+	controller := NewOrderController(mockOrderDS, mockOrderStatusDS, mockBroker)
+
+	orderID := "550e8400-e29b-41d4-a716-446655440000" // Valid UUID
+	now := time.Now()
+
+	mockOrder := daos.OrderDAO{
+		ID:         orderID,
+		CustomerID: stringPtr("customer-1"),
+		Amount:     15.75,
+		Status: daos.OrderStatusDAO{
+			ID:   "status-1",
+			Name: "PENDING",
+		},
+		CreatedAt: now,
+		Items: []daos.OrderItemDAO{
+			{
+				ID:        "item-1",
+				ProductID: "product-1",
+				OrderID:   orderID,
+				Quantity:  1,
+				UnitPrice: 15.75,
+			},
 		},
 	}
-	statusDS := &mockOrderStatusDataSource{}
-	broker := &mockMessageBroker{}
 
-	controller := NewOrderController(orderDS, statusDS, broker)
+	mockOrderDS.On("FindByID", orderID).Return(mockOrder, nil)
 
-	result, err := controller.FindByID("550e8400-e29b-41d4-a716-446655440000")
+	result, err := controller.FindByID(orderID)
 
-	if err != nil {
-		t.Errorf("Expected no error, got %v", err)
-	}
+	assert.NoError(t, err)
+	assert.Equal(t, orderID, result.ID)
+	assert.Equal(t, "customer-1", *result.CustomerID)
+	assert.Equal(t, float64(15.75), result.Amount)
+	assert.Equal(t, "PENDING", result.Status.Name)
 
-	if result.ID != "550e8400-e29b-41d4-a716-446655440000" {
-		t.Errorf("Expected order ID '550e8400-e29b-41d4-a716-446655440000', got '%s'", result.ID)
-	}
+	mockOrderDS.AssertExpectations(t)
 }
 
-func TestOrderController_FindByID_NotFound(t *testing.T) {
-	orderDS := &mockOrderDataSource{
-		findByIDFunc: func(id string) (daos.OrderDAO, error) {
-			return daos.OrderDAO{}, errors.New("not found")
-		},
-	}
-	statusDS := &mockOrderStatusDataSource{}
-	broker := &mockMessageBroker{}
+func TestOrderController_FindByID_Error(t *testing.T) {
+	mockOrderDS := &MockOrderDataSource{}
+	mockOrderStatusDS := &MockOrderStatusDataSource{}
+	mockBroker := &MockMessageBroker{}
 
-	controller := NewOrderController(orderDS, statusDS, broker)
+	controller := NewOrderController(mockOrderDS, mockOrderStatusDS, mockBroker)
 
-	_, err := controller.FindByID("nonexistent")
+	orderID := "invalid-order-id" // Invalid UUID
 
-	if err == nil {
-		t.Error("Expected error when order not found")
-	}
+	result, err := controller.FindByID(orderID)
+
+	assert.Error(t, err)
+	assert.Equal(t, dtos.OrderResponseDTO{}, result)
+	assert.Contains(t, err.Error(), "Invalid order ID")
 }
 
 func TestOrderController_Update_Success(t *testing.T) {
-	orderDS := &mockOrderDataSource{
-		findByIDFunc: func(id string) (daos.OrderDAO, error) {
-			return daos.OrderDAO{
-				ID:         "550e8400-e29b-41d4-a716-446655440000",
-				CustomerID: stringPtr("customer-1"),
-				Amount:     25.0,
-				Status: daos.OrderStatusDAO{
-					ID:   "status-1",
-					Name: "Pending",
-				},
-				Items: []daos.OrderItemDAO{
-					{
-						ID:        "item-1",
-						OrderID:   "550e8400-e29b-41d4-a716-446655440000",
-						ProductID: "product-1",
-						Quantity:  1,
-						UnitPrice: 25.0,
-					},
-				},
-			}, nil
-		},
-		updateFunc: func(order daos.OrderDAO) error {
-			return nil
-		},
-	}
-	statusDS := &mockOrderStatusDataSource{
-		findByIDFunc: func(id string) (daos.OrderStatusDAO, error) {
-			return daos.OrderStatusDAO{ID: "status-2", Name: "Confirmed"}, nil
-		},
-	}
-	broker := &mockMessageBroker{}
+	mockOrderDS := &MockOrderDataSource{}
+	mockOrderStatusDS := &MockOrderStatusDataSource{}
+	mockBroker := &MockMessageBroker{}
 
-	controller := NewOrderController(orderDS, statusDS, broker)
+	controller := NewOrderController(mockOrderDS, mockOrderStatusDS, mockBroker)
 
-	dto := dtos.UpdateOrderDTO{
-		ID:       "550e8400-e29b-41d4-a716-446655440000",
+	updateDTO := dtos.UpdateOrderDTO{
+		ID:       "550e8400-e29b-41d4-a716-446655440000", // Valid UUID
 		StatusID: "status-2",
 	}
 
-	result, err := controller.Update(dto)
-
-	if err != nil {
-		t.Errorf("Expected no error, got %v", err)
+	now := time.Now()
+	mockOrder := daos.OrderDAO{
+		ID:         "550e8400-e29b-41d4-a716-446655440000",
+		CustomerID: stringPtr("customer-1"),
+		Amount:     20.00,
+		Status: daos.OrderStatusDAO{
+			ID:   "status-1",
+			Name: "PENDING",
+		},
+		CreatedAt: now,
+		Items:     []daos.OrderItemDAO{},
 	}
 
-	if result.ID != "550e8400-e29b-41d4-a716-446655440000" {
-		t.Errorf("Expected order ID '550e8400-e29b-41d4-a716-446655440000', got '%s'", result.ID)
+	mockOrderDS.On("FindByID", "550e8400-e29b-41d4-a716-446655440000").Return(mockOrder, nil)
+	mockOrderStatusDS.On("FindByID", "status-2").Return(daos.OrderStatusDAO{
+		ID:   "status-2",
+		Name: "CONFIRMED",
+	}, nil)
+	mockOrderDS.On("Update", mock.AnythingOfType("daos.OrderDAO")).Return(nil)
+
+	result, err := controller.Update(updateDTO)
+
+	assert.NoError(t, err)
+	assert.Equal(t, "550e8400-e29b-41d4-a716-446655440000", result.ID)
+	assert.Equal(t, "CONFIRMED", result.Status.Name)
+
+	mockOrderDS.AssertExpectations(t)
+	mockOrderStatusDS.AssertExpectations(t)
+}
+
+func TestOrderController_UpdateStatus_Success(t *testing.T) {
+	mockOrderDS := &MockOrderDataSource{}
+	mockOrderStatusDS := &MockOrderStatusDataSource{}
+	mockBroker := &MockMessageBroker{}
+
+	controller := NewOrderController(mockOrderDS, mockOrderStatusDS, mockBroker)
+
+	updateDTO := dtos.UpdateOrderStatusDTO{
+		OrderID: "550e8400-e29b-41d4-a716-446655440000", // Valid UUID
+		Status:  "CONFIRMED",
 	}
+
+	now := time.Now()
+	mockOrder := daos.OrderDAO{
+		ID:         "550e8400-e29b-41d4-a716-446655440000",
+		CustomerID: stringPtr("customer-1"),
+		Amount:     20.00,
+		Status: daos.OrderStatusDAO{
+			ID:   "status-1",
+			Name: "PENDING",
+		},
+		CreatedAt: now,
+		Items:     []daos.OrderItemDAO{},
+	}
+
+	mockOrderDS.On("FindByID", "550e8400-e29b-41d4-a716-446655440000").Return(mockOrder, nil)
+	mockOrderStatusDS.On("FindByName", "CONFIRMED").Return(daos.OrderStatusDAO{
+		ID:   "status-2",
+		Name: "CONFIRMED",
+	}, nil)
+	mockOrderDS.On("Update", mock.AnythingOfType("daos.OrderDAO")).Return(nil)
+
+	result, err := controller.UpdateStatus(updateDTO)
+
+	assert.NoError(t, err)
+	assert.Equal(t, "550e8400-e29b-41d4-a716-446655440000", result.ID)
+	assert.Equal(t, "CONFIRMED", result.Status.Name)
+
+	mockOrderDS.AssertExpectations(t)
+	mockOrderStatusDS.AssertExpectations(t)
 }
 
 func TestOrderController_Delete_Success(t *testing.T) {
-	orderDS := &mockOrderDataSource{
-		findByIDFunc: func(id string) (daos.OrderDAO, error) {
-			return daos.OrderDAO{
-				ID:         "550e8400-e29b-41d4-a716-446655440000",
-				CustomerID: stringPtr("customer-1"),
-				Amount:     25.0,
-				Status: daos.OrderStatusDAO{
-					ID:   "status-1",
-					Name: "Pending",
-				},
-				Items: []daos.OrderItemDAO{
-					{
-						ID:        "item-1",
-						OrderID:   "550e8400-e29b-41d4-a716-446655440000",
-						ProductID: "product-1",
-						Quantity:  1,
-						UnitPrice: 25.0,
-					},
-				},
-			}, nil
+	mockOrderDS := &MockOrderDataSource{}
+	mockOrderStatusDS := &MockOrderStatusDataSource{}
+	mockBroker := &MockMessageBroker{}
+
+	controller := NewOrderController(mockOrderDS, mockOrderStatusDS, mockBroker)
+
+	orderID := "550e8400-e29b-41d4-a716-446655440000" // Valid UUID
+	now := time.Now()
+
+	mockOrder := daos.OrderDAO{
+		ID:         orderID,
+		CustomerID: stringPtr("customer-1"),
+		Amount:     25.50,
+		Status: daos.OrderStatusDAO{
+			ID:   "status-1",
+			Name: "PENDING",
 		},
-		deleteFunc: func(id string) error {
-			return nil
+		CreatedAt: now,
+		Items: []daos.OrderItemDAO{
+			{
+				ID:        "item-1",
+				ProductID: "product-1",
+				OrderID:   orderID,
+				Quantity:  2,
+				UnitPrice: 12.75,
+			},
 		},
 	}
-	statusDS := &mockOrderStatusDataSource{}
-	broker := &mockMessageBroker{}
 
-	controller := NewOrderController(orderDS, statusDS, broker)
+	mockOrderDS.On("FindByID", orderID).Return(mockOrder, nil)
+	mockOrderDS.On("Delete", orderID).Return(nil)
 
-	err := controller.Delete("550e8400-e29b-41d4-a716-446655440000")
+	err := controller.Delete(orderID)
 
-	if err != nil {
-		t.Errorf("Expected no error, got %v", err)
-	}
+	assert.NoError(t, err)
+
+	mockOrderDS.AssertExpectations(t)
 }
 
 func TestOrderController_Delete_Error(t *testing.T) {
-	orderDS := &mockOrderDataSource{
-		deleteFunc: func(id string) error {
-			return errors.New("delete failed")
-		},
-	}
-	statusDS := &mockOrderStatusDataSource{}
-	broker := &mockMessageBroker{}
+	mockOrderDS := &MockOrderDataSource{}
+	mockOrderStatusDS := &MockOrderStatusDataSource{}
+	mockBroker := &MockMessageBroker{}
 
-	controller := NewOrderController(orderDS, statusDS, broker)
+	controller := NewOrderController(mockOrderDS, mockOrderStatusDS, mockBroker)
 
-	err := controller.Delete("order-1")
+	orderID := "invalid-order-id" // Invalid UUID
 
-	if err == nil {
-		t.Error("Expected error when delete fails")
-	}
+	err := controller.Delete(orderID)
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "Invalid order ID")
 }
 
 func TestOrderController_FindAllStatus_Success(t *testing.T) {
-	orderDS := &mockOrderDataSource{}
-	statusDS := &mockOrderStatusDataSource{
-		findAllFunc: func() ([]daos.OrderStatusDAO, error) {
-			return []daos.OrderStatusDAO{
-				{ID: "status-1", Name: "Pending"},
-				{ID: "status-2", Name: "Confirmed"},
-			}, nil
-		},
-	}
-	broker := &mockMessageBroker{}
+	mockOrderDS := &MockOrderDataSource{}
+	mockOrderStatusDS := &MockOrderStatusDataSource{}
+	mockBroker := &MockMessageBroker{}
 
-	controller := NewOrderController(orderDS, statusDS, broker)
+	controller := NewOrderController(mockOrderDS, mockOrderStatusDS, mockBroker)
+
+	mockStatuses := []daos.OrderStatusDAO{
+		{ID: "status-1", Name: "PENDING"},
+		{ID: "status-2", Name: "CONFIRMED"},
+		{ID: "status-3", Name: "CANCELLED"},
+	}
+
+	mockOrderStatusDS.On("FindAll").Return(mockStatuses, nil)
 
 	result, err := controller.FindAllStatus()
 
-	if err != nil {
-		t.Errorf("Expected no error, got %v", err)
-	}
+	assert.NoError(t, err)
+	assert.Len(t, result, 3)
+	assert.Equal(t, "PENDING", result[0].Name)
+	assert.Equal(t, "CONFIRMED", result[1].Name)
+	assert.Equal(t, "CANCELLED", result[2].Name)
 
-	if len(result) != 2 {
-		t.Errorf("Expected 2 statuses, got %d", len(result))
-	}
+	mockOrderStatusDS.AssertExpectations(t)
 }
 
 func TestOrderController_FindAllStatus_Error(t *testing.T) {
-	orderDS := &mockOrderDataSource{}
-	statusDS := &mockOrderStatusDataSource{
-		findAllFunc: func() ([]daos.OrderStatusDAO, error) {
-			return nil, errors.New("database error")
-		},
-	}
-	broker := &mockMessageBroker{}
+	mockOrderDS := &MockOrderDataSource{}
+	mockOrderStatusDS := &MockOrderStatusDataSource{}
+	mockBroker := &MockMessageBroker{}
 
-	controller := NewOrderController(orderDS, statusDS, broker)
+	controller := NewOrderController(mockOrderDS, mockOrderStatusDS, mockBroker)
 
-	_, err := controller.FindAllStatus()
+	mockOrderStatusDS.On("FindAll").Return([]daos.OrderStatusDAO{}, errors.New("database error"))
 
-	if err == nil {
-		t.Error("Expected error from database")
-	}
+	result, err := controller.FindAllStatus()
+
+	assert.Error(t, err)
+	assert.Nil(t, result)
+	assert.Contains(t, err.Error(), "database error")
+
+	mockOrderStatusDS.AssertExpectations(t)
 }
 
 // Helper function
