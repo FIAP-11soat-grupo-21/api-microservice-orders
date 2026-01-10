@@ -2,7 +2,9 @@ package factories
 
 import (
 	"microservice/infra/db/postgres/data_source"
+	"microservice/internal/adapters/gateways"
 	"microservice/internal/interfaces"
+	"microservice/internal/use_cases"
 )
 
 var newOrderDataSource func() interfaces.IOrderDataSource = func() interfaces.IOrderDataSource {
@@ -19,6 +21,14 @@ func NewOrderDataSource() interfaces.IOrderDataSource {
 
 func NewOrderStatusDataSource() interfaces.IOrderStatusDataSource {
 	return newOrderStatusDataSource()
+}
+
+func NewUpdateOrderStatusUseCase() *use_cases.UpdateOrderStatusUseCase {
+	orderDataSource := NewOrderDataSource()
+	orderStatusDataSource := NewOrderStatusDataSource()
+	orderGateway := gateways.NewOrderGateway(orderDataSource)
+	orderStatusGateway := gateways.NewOrderStatusGateway(orderStatusDataSource)
+	return use_cases.NewUpdateOrderStatusUseCase(orderGateway, orderStatusGateway)
 }
 
 func SetNewOrderDataSource(fn func() interfaces.IOrderDataSource) {

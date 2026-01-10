@@ -18,8 +18,7 @@ func TestConnect_Simple(t *testing.T) {
 	os.Setenv("DB_USERNAME", "test_user")
 	os.Setenv("DB_PASSWORD", "test_pass")
 	os.Setenv("MESSAGE_BROKER_TYPE", "sqs")
-	os.Setenv("SQS_PAYMENT_QUEUE_URL", "https://sqs.us-east-1.amazonaws.com/123456789012/payment")
-	os.Setenv("SQS_KITCHEN_QUEUE_URL", "https://sqs.us-east-1.amazonaws.com/123456789012/kitchen")
+	os.Setenv("SQS_ORDERS_QUEUE_URL", "https://sqs.us-east-1.amazonaws.com/123456789012/orders")
 	os.Setenv("AWS_REGION", "us-east-1")
 
 	defer func() {
@@ -33,8 +32,7 @@ func TestConnect_Simple(t *testing.T) {
 		os.Unsetenv("DB_USERNAME")
 		os.Unsetenv("DB_PASSWORD")
 		os.Unsetenv("MESSAGE_BROKER_TYPE")
-		os.Unsetenv("SQS_PAYMENT_QUEUE_URL")
-		os.Unsetenv("SQS_KITCHEN_QUEUE_URL")
+		os.Unsetenv("SQS_ORDERS_QUEUE_URL")
 		os.Unsetenv("AWS_REGION")
 	}()
 
@@ -47,21 +45,6 @@ func TestConnect_Simple(t *testing.T) {
 func TestGetBroker_Simple(t *testing.T) {
 	broker := GetBroker()
 	_ = broker
-}
-
-func TestNewPaymentEventConsumer_Simple(t *testing.T) {
-	consumer := NewPaymentEventConsumer()
-	if consumer == nil {
-		t.Error("Expected consumer to be created")
-	}
-}
-
-func TestPaymentEventConsumer_Start_Simple(t *testing.T) {
-	consumer := &PaymentEventConsumer{}
-	err := consumer.Start()
-	if err != nil {
-		t.Errorf("Expected no error, got %v", err)
-	}
 }
 
 func TestBuildRabbitMQURL_Simple(t *testing.T) {

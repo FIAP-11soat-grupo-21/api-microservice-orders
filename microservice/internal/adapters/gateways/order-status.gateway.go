@@ -44,3 +44,17 @@ func (g *OrderStatusGateway) FindByID(id string) (*entities.OrderStatus, error) 
 
 	return status, nil
 }
+
+func (g *OrderStatusGateway) FindByName(name string) (*entities.OrderStatus, error) {
+	statusDAO, err := g.datasource.FindByName(name)
+	if err != nil {
+		return nil, err
+	}
+
+	status, err := entities.NewOrderStatus(statusDAO.ID, statusDAO.Name)
+	if err != nil {
+		return nil, err
+	}
+
+	return status, nil
+}

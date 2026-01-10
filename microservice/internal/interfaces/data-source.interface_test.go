@@ -48,6 +48,11 @@ func (m *MockOrderStatusDataSource) FindByID(id string) (daos.OrderStatusDAO, er
 	return args.Get(0).(daos.OrderStatusDAO), args.Error(1)
 }
 
+func (m *MockOrderStatusDataSource) FindByName(name string) (daos.OrderStatusDAO, error) {
+	args := m.Called(name)
+	return args.Get(0).(daos.OrderStatusDAO), args.Error(1)
+}
+
 func (m *MockOrderStatusDataSource) FindAll() ([]daos.OrderStatusDAO, error) {
 	args := m.Called()
 	return args.Get(0).([]daos.OrderStatusDAO), args.Error(1)

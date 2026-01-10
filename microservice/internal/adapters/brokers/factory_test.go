@@ -14,10 +14,9 @@ func TestNewFactory(t *testing.T) {
 func TestFactory_CreateBroker_SQS(t *testing.T) {
 	factory := NewFactory()
 	config := BrokerConfig{
-		Type:               "sqs",
-		SQSPaymentQueueURL: "https://sqs.us-east-1.amazonaws.com/123456789012/payment-queue",
-		SQSKitchenQueueURL: "https://sqs.us-east-1.amazonaws.com/123456789012/kitchen-queue",
-		AWSRegion:          "us-east-1",
+		Type:              "sqs",
+		SQSOrdersQueueURL: "https://sqs.us-east-1.amazonaws.com/123456789012/orders-queue",
+		AWSRegion:         "us-east-1",
 	}
 
 	broker, err := factory.CreateBroker(config)
@@ -40,10 +39,9 @@ func TestFactory_CreateBroker_RabbitMQ(t *testing.T) {
 
 	factory := NewFactory()
 	config := BrokerConfig{
-		Type:                 "rabbitmq",
-		RabbitMQURL:          "amqp://guest:guest@localhost:5672/",
-		RabbitMQPaymentQueue: "payment-confirmations",
-		RabbitMQKitchenQueue: "kitchen-orders",
+		Type:                "rabbitmq",
+		RabbitMQURL:         "amqp://guest:guest@localhost:5672/",
+		RabbitMQOrdersQueue: "orders-updates",
 	}
 
 	broker, err := factory.CreateBroker(config)
@@ -68,10 +66,9 @@ func TestFactory_CreateBroker_CaseInsensitive(t *testing.T) {
 
 	for _, brokerType := range testCases {
 		config := BrokerConfig{
-			Type:               brokerType,
-			SQSPaymentQueueURL: "https://sqs.us-east-1.amazonaws.com/123456789012/payment-queue",
-			SQSKitchenQueueURL: "https://sqs.us-east-1.amazonaws.com/123456789012/kitchen-queue",
-			AWSRegion:          "us-east-1",
+			Type:              brokerType,
+			SQSOrdersQueueURL: "https://sqs.us-east-1.amazonaws.com/123456789012/orders-queue",
+			AWSRegion:         "us-east-1",
 		}
 
 		broker, err := factory.CreateBroker(config)

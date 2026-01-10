@@ -53,22 +53,34 @@ func (ds *testOrderDataSource) Delete(id string) error {
 }
 
 type testOrderStatusDataSource struct {
-	statuses map[string]daos.OrderStatusDAO
+	statuses       map[string]daos.OrderStatusDAO
+	statusesByName map[string]daos.OrderStatusDAO
 }
 
 func newTestOrderStatusDataSource() *testOrderStatusDataSource {
 	ds := &testOrderStatusDataSource{
-		statuses: make(map[string]daos.OrderStatusDAO),
+		statuses:       make(map[string]daos.OrderStatusDAO),
+		statusesByName: make(map[string]daos.OrderStatusDAO),
 	}
-	ds.statuses["56d3b3c3-1801-49cd-bae7-972c78082012"] = daos.OrderStatusDAO{
+	status := daos.OrderStatusDAO{
 		ID:   "56d3b3c3-1801-49cd-bae7-972c78082012",
 		Name: "Recebido",
 	}
+	ds.statuses[status.ID] = status
+	ds.statusesByName[status.Name] = status
 	return ds
 }
 
 func (ds *testOrderStatusDataSource) FindByID(id string) (daos.OrderStatusDAO, error) {
 	status, ok := ds.statuses[id]
+	if !ok {
+		return daos.OrderStatusDAO{}, errors.New("not found")
+	}
+	return status, nil
+}
+
+func (ds *testOrderStatusDataSource) FindByName(name string) (daos.OrderStatusDAO, error) {
+	status, ok := ds.statusesByName[name]
 	if !ok {
 		return daos.OrderStatusDAO{}, errors.New("not found")
 	}
@@ -86,11 +98,7 @@ func (ds *testOrderStatusDataSource) FindAll() ([]daos.OrderStatusDAO, error) {
 // Mock do MessageBroker para testes
 type testMessageBroker struct{}
 
-func (m *testMessageBroker) SendToKitchen(message map[string]interface{}) error {
-	return nil
-}
-
-func (m *testMessageBroker) ConsumePaymentConfirmations(ctx context.Context, handler brokers.PaymentConfirmationHandler) error {
+func (m *testMessageBroker) ConsumeOrderUpdates(ctx context.Context, handler brokers.OrderUpdateHandler) error {
 	return nil
 }
 

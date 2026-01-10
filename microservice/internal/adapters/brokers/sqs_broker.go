@@ -7,16 +7,14 @@ import (
 	"log"
 	"time"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	"github.com/aws/aws-sdk-go-v2/service/sqs/types"
 )
 
 type SQSBroker struct {
-	client          *sqs.Client
-	paymentQueueURL string
-	kitchenQueueURL string
+	client         *sqs.Client
+	ordersQueueURL string
 }
 
 func NewSQSBroker(brokerConfig BrokerConfig) (*SQSBroker, error) {
@@ -25,35 +23,30 @@ func NewSQSBroker(brokerConfig BrokerConfig) (*SQSBroker, error) {
 		return nil, fmt.Errorf("failed to load AWS config: %w", err)
 	}
 
-	if brokerConfig.SQSPaymentQueueURL == "" {
-		return nil, fmt.Errorf("SQS payment queue URL is required")
-	}
-	if brokerConfig.SQSKitchenQueueURL == "" {
-		return nil, fmt.Errorf("SQS kitchen queue URL is required")
+	if brokerConfig.SQSOrdersQueueURL == "" {
+		return nil, fmt.Errorf("SQS orders queue URL is required")
 	}
 
-	log.Printf("SQS: Configured with payment queue: %s", brokerConfig.SQSPaymentQueueURL)
-	log.Printf("SQS: Configured with kitchen queue: %s", brokerConfig.SQSKitchenQueueURL)
+	log.Printf("SQS: Configured with orders queue: %s", brokerConfig.SQSOrdersQueueURL)
 
 	return &SQSBroker{
-		client:          sqs.NewFromConfig(cfg),
-		paymentQueueURL: brokerConfig.SQSPaymentQueueURL,
-		kitchenQueueURL: brokerConfig.SQSKitchenQueueURL,
+		client:         sqs.NewFromConfig(cfg),
+		ordersQueueURL: brokerConfig.SQSOrdersQueueURL,
 	}, nil
 }
 
-func (s *SQSBroker) ConsumePaymentConfirmations(ctx context.Context, handler PaymentConfirmationHandler) error {
-	log.Printf("SQS: Starting payment confirmation consumer on payment queue: %s", s.paymentQueueURL)
+func (s *SQSBroker) ConsumeOrderUpdates(ctx context.Context, handler OrderUpdateHandler) error {
+	log.Printf("SQS: Starting order updates consumer on orders queue: %s", s.ordersQueueURL)
 
 	go func() {
 		for {
 			select {
 			case <-ctx.Done():
-				log.Println("SQS: Stopping payment confirmation consumer")
+				log.Println("SQS: Stopping order updates consumer")
 				return
 			default:
-				if err := s.pollMessages(ctx, handler); err != nil {
-					log.Printf("SQS: Error polling messages: %v", err)
+				if err := s.pollOrderUpdateMessages(ctx, handler); err != nil {
+					log.Printf("SQS: Error polling order update messages: %v", err)
 					time.Sleep(5 * time.Second)
 				}
 			}
@@ -63,9 +56,9 @@ func (s *SQSBroker) ConsumePaymentConfirmations(ctx context.Context, handler Pay
 	return nil
 }
 
-func (s *SQSBroker) pollMessages(ctx context.Context, handler PaymentConfirmationHandler) error {
+func (s *SQSBroker) pollOrderUpdateMessages(ctx context.Context, handler OrderUpdateHandler) error {
 	input := &sqs.ReceiveMessageInput{
-		QueueUrl:              &s.paymentQueueURL, // Usar fila de pagamento
+		QueueUrl:              &s.ordersQueueURL,
 		MaxNumberOfMessages:   10,
 		WaitTimeSeconds:       10, // Long polling
 		MessageAttributeNames: []string{"All"},
@@ -73,95 +66,42 @@ func (s *SQSBroker) pollMessages(ctx context.Context, handler PaymentConfirmatio
 
 	result, err := s.client.ReceiveMessage(ctx, input)
 	if err != nil {
-		return fmt.Errorf("failed to receive messages: %w", err)
+		return fmt.Errorf("failed to receive order update messages: %w", err)
 	}
 
 	for _, message := range result.Messages {
-		if err := s.processMessage(ctx, message, handler); err != nil {
-			log.Printf("SQS: Error processing message: %v", err)
+		if err := s.processOrderUpdateMessage(ctx, message, handler); err != nil {
+			log.Printf("SQS: Error processing order update message: %v", err)
 			continue
 		}
 
-		if err := s.deleteMessage(ctx, message); err != nil {
-			log.Printf("SQS: Error deleting message: %v", err)
+		if err := s.deleteOrderUpdateMessage(ctx, message); err != nil {
+			log.Printf("SQS: Error deleting order update message: %v", err)
 		}
 	}
 
 	return nil
 }
 
-func (s *SQSBroker) processMessage(ctx context.Context, message types.Message, handler PaymentConfirmationHandler) error {
-	messageType := ""
-	if attr, exists := message.MessageAttributes["message_type"]; exists && attr.StringValue != nil {
-		messageType = *attr.StringValue
+func (s *SQSBroker) processOrderUpdateMessage(ctx context.Context, message types.Message, handler OrderUpdateHandler) error {
+	var updateMsg OrderUpdateMessage
+	if err := json.Unmarshal([]byte(*message.Body), &updateMsg); err != nil {
+		return fmt.Errorf("failed to unmarshal order update message: %w", err)
 	}
 
-	if messageType != "payment.confirmed" && messageType != "payment.failed" {
-		log.Printf("SQS: Skipping non-payment message type: %s", messageType)
-		return nil
-	}
+	log.Printf("SQS: Processing order update for order %s", updateMsg.OrderID)
 
-	var paymentMsg PaymentConfirmationMessage
-	if err := json.Unmarshal([]byte(*message.Body), &paymentMsg); err != nil {
-		return fmt.Errorf("failed to unmarshal payment message: %w", err)
-	}
-
-	log.Printf("SQS: Processing payment confirmation for order %s", paymentMsg.OrderID)
-
-	return handler(paymentMsg)
+	return handler(updateMsg)
 }
 
-func (s *SQSBroker) deleteMessage(ctx context.Context, message types.Message) error {
+func (s *SQSBroker) deleteOrderUpdateMessage(ctx context.Context, message types.Message) error {
 	input := &sqs.DeleteMessageInput{
-		QueueUrl:      &s.paymentQueueURL, // Usar fila de pagamento
+		QueueUrl:      &s.ordersQueueURL,
 		ReceiptHandle: message.ReceiptHandle,
 	}
 
 	_, err := s.client.DeleteMessage(ctx, input)
 	return err
-}
-
-func (s *SQSBroker) SendToKitchen(message map[string]interface{}) error {
-	if s == nil {
-		return fmt.Errorf("SQS broker is not initialized")
-	}
-
-	if s.client == nil {
-		return fmt.Errorf("SQS client is not initialized")
-	}
-
-	body, err := json.Marshal(message)
-	if err != nil {
-		return fmt.Errorf("failed to marshal kitchen message: %w", err)
-	}
-
-	input := &sqs.SendMessageInput{
-		QueueUrl:    &s.kitchenQueueURL, // Usar fila da cozinha
-		MessageBody: aws.String(string(body)),
-		MessageAttributes: map[string]types.MessageAttributeValue{
-			"message_type": {
-				DataType:    aws.String("String"),
-				StringValue: aws.String(fmt.Sprintf("%v", message["type"])),
-			},
-			"order_id": {
-				DataType:    aws.String("String"),
-				StringValue: aws.String(fmt.Sprintf("%v", message["order_id"])),
-			},
-			"source": {
-				DataType:    aws.String("String"),
-				StringValue: aws.String("orders-api"),
-			},
-		},
-	}
-
-	result, err := s.client.SendMessage(context.TODO(), input)
-	if err != nil {
-		return fmt.Errorf("failed to send kitchen message: %w", err)
-	}
-
-	log.Printf("SQS: Sent message to kitchen queue %s for order %v (MessageId: %s)",
-		s.kitchenQueueURL, message["order_id"], *result.MessageId)
-	return nil
 }
 
 func (s *SQSBroker) Close() error {

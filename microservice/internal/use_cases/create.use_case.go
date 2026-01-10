@@ -1,7 +1,6 @@
 package use_cases
 
 import (
-	"log"
 	"time"
 
 	"microservice/internal/adapters/brokers"
@@ -60,34 +59,6 @@ func (uc *CreateOrderUseCase) Execute(customerID *string, items []dtos.CreateOrd
 	err = uc.orderGateway.Create(*order)
 	if err != nil {
 		return entities.Order{}, err
-	}
-
-	if uc.messageBroker != nil {
-		items := make([]map[string]interface{}, len(order.Items))
-		for i, item := range order.Items {
-			items[i] = map[string]interface{}{
-				"id":         item.ID,
-				"product_id": item.ProductID.Value(),
-				"quantity":   item.Quantity.Value(),
-				"unit_price": item.UnitPrice.Value(),
-			}
-		}
-
-		kitchenMessage := map[string]interface{}{
-			"order_id":    order.ID,
-			"customer_id": order.CustomerID,
-			"amount":      order.Amount.Value(),
-			"items":       items,
-			"type":        "order.created",
-		}
-
-		if err := uc.messageBroker.SendToKitchen(kitchenMessage); err != nil {
-			log.Printf("Warning: Failed to send message to kitchen: %v", err)
-		} else {
-			log.Printf("Kitchen order creation message sent for order %s (Amount: %.2f, Items: %d)", order.ID, order.Amount.Value(), len(order.Items))
-		}
-	} else {
-		log.Printf("Warning: Message broker not available, skipping kitchen notification for order %s", order.ID)
 	}
 
 	return *order, nil

@@ -78,22 +78,30 @@ func (m *MockOrderGateway) Delete(id string) error {
 }
 
 type MockOrderStatusGateway struct {
-	statuses           map[string]*entities.OrderStatus
-	shouldFailFindByID bool
+	statuses             map[string]*entities.OrderStatus
+	statusesByName       map[string]*entities.OrderStatus
+	shouldFailFindByID   bool
+	shouldFailFindByName bool
 }
 
 func NewMockOrderStatusGateway() *MockOrderStatusGateway {
 	return &MockOrderStatusGateway{
-		statuses: make(map[string]*entities.OrderStatus),
+		statuses:       make(map[string]*entities.OrderStatus),
+		statusesByName: make(map[string]*entities.OrderStatus),
 	}
 }
 
 func (m *MockOrderStatusGateway) AddStatus(status *entities.OrderStatus) {
 	m.statuses[status.ID] = status
+	m.statusesByName[status.Name.Value()] = status
 }
 
 func (m *MockOrderStatusGateway) SetShouldFailFindByID(fail bool) {
 	m.shouldFailFindByID = fail
+}
+
+func (m *MockOrderStatusGateway) SetShouldFailFindByName(fail bool) {
+	m.shouldFailFindByName = fail
 }
 
 func (m *MockOrderStatusGateway) FindAll() ([]entities.OrderStatus, error) {
@@ -110,6 +118,18 @@ func (m *MockOrderStatusGateway) FindByID(id string) (*entities.OrderStatus, err
 	}
 
 	status, exists := m.statuses[id]
+	if !exists {
+		return nil, &exceptions.OrderStatusNotFoundException{}
+	}
+	return status, nil
+}
+
+func (m *MockOrderStatusGateway) FindByName(name string) (*entities.OrderStatus, error) {
+	if m.shouldFailFindByName {
+		return nil, &exceptions.OrderStatusNotFoundException{}
+	}
+
+	status, exists := m.statusesByName[name]
 	if !exists {
 		return nil, &exceptions.OrderStatusNotFoundException{}
 	}

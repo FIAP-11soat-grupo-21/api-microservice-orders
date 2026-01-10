@@ -27,16 +27,14 @@ type Config struct {
 
 		// SQS
 		SQS struct {
-			PaymentQueueURL string
-			KitchenQueueURL string
-			AWSRegion       string
+			OrdersQueueURL string
+			AWSRegion      string
 		}
 
 		// RabbitMQ
 		RabbitMQ struct {
-			URL          string // (ex: amqp://user:pass@host:port/)
-			PaymentQueue string
-			KitchenQueue string
+			URL         string // (ex: amqp://user:pass@host:port/)
+			OrdersQueue string
 		}
 	}
 }
@@ -86,14 +84,12 @@ func (c *Config) Load() *Config {
 	c.MessageBroker.Type = getEnv("MESSAGE_BROKER_TYPE", "sqs")
 
 	// SQS
-	c.MessageBroker.SQS.PaymentQueueURL = getEnv("SQS_PAYMENT_QUEUE_URL", "")
-	c.MessageBroker.SQS.KitchenQueueURL = getEnv("SQS_KITCHEN_QUEUE_URL", "")
+	c.MessageBroker.SQS.OrdersQueueURL = getEnv("SQS_ORDERS_QUEUE_URL", "")
 	c.MessageBroker.SQS.AWSRegion = getEnv("AWS_REGION", "us-east-2")
 
 	// RabbitMQ
 	c.MessageBroker.RabbitMQ.URL = getEnv("RABBITMQ_URL", "amqp://guest:guest@localhost:5672/")
-	c.MessageBroker.RabbitMQ.PaymentQueue = getEnv("RABBITMQ_PAYMENT_QUEUE", "payment.confirmation")
-	c.MessageBroker.RabbitMQ.KitchenQueue = getEnv("RABBITMQ_KITCHEN_QUEUE", "kitchen.orders")
+	c.MessageBroker.RabbitMQ.OrdersQueue = getEnv("RABBITMQ_ORDERS_QUEUE", "orders.updates")
 
 	return c
 }

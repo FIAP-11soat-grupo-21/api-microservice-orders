@@ -54,13 +54,21 @@ func (m *mockOrderDataSource) Delete(id string) error {
 }
 
 type mockOrderStatusDataSource struct {
-	findByIDFunc func(id string) (daos.OrderStatusDAO, error)
-	findAllFunc  func() ([]daos.OrderStatusDAO, error)
+	findByIDFunc   func(id string) (daos.OrderStatusDAO, error)
+	findByNameFunc func(name string) (daos.OrderStatusDAO, error)
+	findAllFunc    func() ([]daos.OrderStatusDAO, error)
 }
 
 func (m *mockOrderStatusDataSource) FindByID(id string) (daos.OrderStatusDAO, error) {
 	if m.findByIDFunc != nil {
 		return m.findByIDFunc(id)
+	}
+	return daos.OrderStatusDAO{}, nil
+}
+
+func (m *mockOrderStatusDataSource) FindByName(name string) (daos.OrderStatusDAO, error) {
+	if m.findByNameFunc != nil {
+		return m.findByNameFunc(name)
 	}
 	return daos.OrderStatusDAO{}, nil
 }
@@ -74,11 +82,7 @@ func (m *mockOrderStatusDataSource) FindAll() ([]daos.OrderStatusDAO, error) {
 
 type mockMessageBroker struct{}
 
-func (m *mockMessageBroker) SendToKitchen(message map[string]interface{}) error {
-	return nil
-}
-
-func (m *mockMessageBroker) ConsumePaymentConfirmations(ctx context.Context, handler brokers.PaymentConfirmationHandler) error {
+func (m *mockMessageBroker) ConsumeOrderUpdates(ctx context.Context, handler brokers.OrderUpdateHandler) error {
 	return nil
 }
 
