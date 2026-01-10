@@ -81,7 +81,10 @@ func TestGormOrderDataSource_Create_Integration(t *testing.T) {
 	}
 	
 	// Cleanup
-	dataSource.Delete("test-order-create-integration")
+	err = dataSource.Delete("test-order-create-integration")
+	if err != nil {
+		t.Logf("Failed to cleanup test order: %v", err)
+	}
 }
 
 func TestGormOrderDataSource_FindAll_WithFilters_Integration(t *testing.T) {
@@ -234,7 +237,10 @@ func TestGormOrderDataSource_Update_Integration(t *testing.T) {
 	}
 	
 	// Cleanup
-	dataSource.Delete("test-order-update-integration")
+	err = dataSource.Delete("test-order-update-integration")
+	if err != nil {
+		t.Logf("Failed to cleanup test order: %v", err)
+	}
 }
 
 func TestGormOrderDataSource_Delete_Integration(t *testing.T) {
