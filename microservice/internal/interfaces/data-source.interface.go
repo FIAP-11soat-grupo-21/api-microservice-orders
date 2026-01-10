@@ -15,5 +15,6 @@ type IOrderDataSource interface {
 
 type IOrderStatusDataSource interface {
 	FindByID(id string) (daos.OrderStatusDAO, error)
+	FindByName(name string) (daos.OrderStatusDAO, error)
 	FindAll() ([]daos.OrderStatusDAO, error)
 }

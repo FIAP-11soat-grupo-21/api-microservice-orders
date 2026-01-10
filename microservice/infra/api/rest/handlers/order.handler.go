@@ -141,6 +141,35 @@ func (h *OrderHandler) Update(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, toOrderResponse(order))
 }
 
+func (h *OrderHandler) UpdateStatus(ctx *gin.Context) {
+	userInput := ctx.Param("id")
+	orderID := strings.ReplaceAll(strings.ReplaceAll(userInput, "\n", "_"), "\r", "_")
+
+	var body schemas.UpdateOrderStatusSchema
+	if err := ctx.ShouldBindJSON(&body); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"error":   "Invalid request body",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	order, err := h.controller.UpdateStatus(dtos.UpdateOrderStatusDTO{
+		OrderID: orderID,
+		Status:  body.Status,
+	})
+
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{
+		"message": "Order status updated successfully",
+		"order":   toOrderResponse(order),
+	})
+}
+
 func (h *OrderHandler) Delete(ctx *gin.Context) {
 	userInput := ctx.Param("id")
 	orderID := strings.ReplaceAll(strings.ReplaceAll(userInput, "\n", "_"), "\r", "_")

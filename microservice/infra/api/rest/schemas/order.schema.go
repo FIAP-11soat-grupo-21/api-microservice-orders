@@ -17,6 +17,10 @@ type UpdateOrderSchema struct {
 	StatusID string `json:"status_id" binding:"required"`
 }
 
+type UpdateOrderStatusSchema struct {
+	Status string `json:"status" binding:"required"`
+}
+
 type OrderItemResponseSchema struct {
 	ID        string  `json:"id"`
 	ProductID string  `json:"product_id"`

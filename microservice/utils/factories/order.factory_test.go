@@ -36,6 +36,10 @@ func (m *mockOrderStatusDataSource) FindByID(id string) (daos.OrderStatusDAO, er
 	return daos.OrderStatusDAO{}, nil
 }
 
+func (m *mockOrderStatusDataSource) FindByName(name string) (daos.OrderStatusDAO, error) {
+	return daos.OrderStatusDAO{}, nil
+}
+
 func (m *mockOrderStatusDataSource) FindAll() ([]daos.OrderStatusDAO, error) {
 	return []daos.OrderStatusDAO{}, nil
 }
@@ -226,5 +230,9 @@ func (m *mockOrderStatusDataSourceCustom) FindAll() ([]daos.OrderStatusDAO, erro
 }
 
 func (m *mockOrderStatusDataSourceCustom) FindByID(id string) (daos.OrderStatusDAO, error) {
+	return daos.OrderStatusDAO{}, nil
+}
+
+func (m *mockOrderStatusDataSourceCustom) FindByName(name string) (daos.OrderStatusDAO, error) {
 	return daos.OrderStatusDAO{}, nil
 }

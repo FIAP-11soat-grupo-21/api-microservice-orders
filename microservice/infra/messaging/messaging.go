@@ -1,20 +1,15 @@
 package messaging
 
 import (
-	"context"
-	"fmt"
 	"log"
 	"strings"
 
 	"microservice/internal/adapters/brokers"
-	"microservice/internal/adapters/consumers"
-	"microservice/internal/use_cases"
 	"microservice/utils/config"
 )
 
 var (
-	paymentConsumer *consumers.PaymentConsumer
-	broker          brokers.MessageBroker
+	broker brokers.MessageBroker
 )
 
 func Connect() error {
@@ -24,19 +19,16 @@ func Connect() error {
 
 	brokerConfig := brokers.BrokerConfig{
 		Type: cfg.MessageBroker.Type,
-		// SQS - Duas filas separadas
-		SQSPaymentQueueURL: cfg.MessageBroker.SQS.PaymentQueueURL,
-		SQSKitchenQueueURL: cfg.MessageBroker.SQS.KitchenQueueURL,
-		AWSRegion:          cfg.MessageBroker.SQS.AWSRegion,
+		// SQS
+		SQSOrdersQueueURL: cfg.MessageBroker.SQS.OrdersQueueURL,
+		AWSRegion:         cfg.MessageBroker.SQS.AWSRegion,
 		// RabbitMQ
-		RabbitMQURL:          buildRabbitMQURL(cfg),
-		RabbitMQPaymentQueue: cfg.MessageBroker.RabbitMQ.PaymentQueue,
-		RabbitMQKitchenQueue: cfg.MessageBroker.RabbitMQ.KitchenQueue,
+		RabbitMQURL:         buildRabbitMQURL(cfg),
+		RabbitMQOrdersQueue: cfg.MessageBroker.RabbitMQ.OrdersQueue,
 	}
 
 	if cfg.MessageBroker.Type == "sqs" {
-		log.Printf("SQS Config - Payment Queue: %s", brokerConfig.SQSPaymentQueueURL)
-		log.Printf("SQS Config - Kitchen Queue: %s", brokerConfig.SQSKitchenQueueURL)
+		log.Printf("SQS Config - Orders Queue: %s", brokerConfig.SQSOrdersQueueURL)
 		log.Printf("SQS Config - AWS Region: %s", brokerConfig.AWSRegion)
 	}
 
@@ -54,39 +46,6 @@ func Connect() error {
 
 func GetBroker() brokers.MessageBroker {
 	return broker
-}
-
-func SetupPaymentConsumer(processPaymentUC *use_cases.ProcessPaymentConfirmationUseCase) error {
-	if broker == nil {
-		return fmt.Errorf("broker not connected, call Connect() first")
-	}
-
-	paymentConsumer = consumers.NewPaymentConsumer(
-		broker,
-		processPaymentUC,
-		broker,
-	)
-
-	ctx := context.Background()
-	go func() {
-		if err := paymentConsumer.Start(ctx); err != nil {
-			log.Printf("Error starting payment consumer: %v", err)
-		}
-	}()
-
-	log.Println("Payment consumer setup completed")
-	return nil
-}
-
-func NewPaymentEventConsumer() *PaymentEventConsumer {
-	return &PaymentEventConsumer{}
-}
-
-type PaymentEventConsumer struct{}
-
-func (c *PaymentEventConsumer) Start() error {
-	log.Println("PaymentEventConsumer.Start() called - consumer will be setup when dependencies are available")
-	return nil
 }
 
 func buildRabbitMQURL(cfg *config.Config) string {

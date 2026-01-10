@@ -13,6 +13,7 @@ func RegisterOrderRoutes(router *gin.RouterGroup) {
 	router.GET("", handler.FindAll)
 	router.GET("/:id", handler.FindByID)
 	router.PUT("/:id", handler.Update)
+	router.PUT("/:id/status", handler.UpdateStatus)
 	router.DELETE("/:id", handler.Delete)
 }
 

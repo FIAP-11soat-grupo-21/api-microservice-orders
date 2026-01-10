@@ -8,13 +8,21 @@ import (
 )
 
 type mockOrderStatusDataSource struct {
-	findByIDFunc func(id string) (daos.OrderStatusDAO, error)
-	findAllFunc  func() ([]daos.OrderStatusDAO, error)
+	findByIDFunc   func(id string) (daos.OrderStatusDAO, error)
+	findByNameFunc func(name string) (daos.OrderStatusDAO, error)
+	findAllFunc    func() ([]daos.OrderStatusDAO, error)
 }
 
 func (m *mockOrderStatusDataSource) FindByID(id string) (daos.OrderStatusDAO, error) {
 	if m.findByIDFunc != nil {
 		return m.findByIDFunc(id)
+	}
+	return daos.OrderStatusDAO{}, nil
+}
+
+func (m *mockOrderStatusDataSource) FindByName(name string) (daos.OrderStatusDAO, error) {
+	if m.findByNameFunc != nil {
+		return m.findByNameFunc(name)
 	}
 	return daos.OrderStatusDAO{}, nil
 }

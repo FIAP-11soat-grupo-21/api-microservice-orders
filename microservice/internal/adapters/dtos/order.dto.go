@@ -33,6 +33,11 @@ type UpdateOrderDTO struct {
 	StatusID string
 }
 
+type UpdateOrderStatusDTO struct {
+	OrderID string
+	Status  string
+}
+
 type OrderFilterDTO struct {
 	CreatedAtFrom *time.Time
 	CreatedAtTo   *time.Time

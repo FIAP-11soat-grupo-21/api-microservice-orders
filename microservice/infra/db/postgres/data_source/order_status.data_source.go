@@ -48,3 +48,16 @@ func (r *GormOrderStatusDataSource) FindByID(id string) (daos.OrderStatusDAO, er
 		Name: status.Name,
 	}, nil
 }
+
+func (r *GormOrderStatusDataSource) FindByName(name string) (daos.OrderStatusDAO, error) {
+	var status models.OrderStatusModel
+
+	if err := r.db.First(&status, "name = ?", name).Error; err != nil {
+		return daos.OrderStatusDAO{}, err
+	}
+
+	return daos.OrderStatusDAO{
+		ID:   status.ID,
+		Name: status.Name,
+	}, nil
+}

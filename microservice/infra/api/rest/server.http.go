@@ -1,6 +1,7 @@
 package rest
 
 import (
+	"context"
 	"log"
 
 	"github.com/gin-gonic/gin"
@@ -9,9 +10,11 @@ import (
 	"microservice/infra/api/rest/middlewares"
 	"microservice/infra/api/rest/routes"
 	"microservice/infra/db/postgres"
+	"microservice/infra/db/postgres/data_source"
 	"microservice/infra/messaging"
+	"microservice/internal/adapters/consumers"
+	"microservice/internal/adapters/gateways"
 	"microservice/utils/config"
-	"microservice/utils/factories"
 )
 
 func NewRouter() *gin.Engine {
@@ -51,13 +54,28 @@ func Init() {
 		log.Println("The application will continue without message queue support")
 	} else {
 		log.Println("Message broker connected successfully")
-
-		processPaymentUseCase := factories.NewProcessPaymentConfirmationUseCase()
-		err = messaging.SetupPaymentConsumer(processPaymentUseCase)
-		if err != nil {
-			log.Printf("Warning: Failed to setup payment consumer: %v", err)
-		} else {
-			log.Println("Payment consumer started successfully")
+		
+		// Inicializar OrderUpdatesConsumer se broker estiver disponível
+		broker := messaging.GetBroker()
+		if broker != nil {
+			ctx := context.Background()
+			
+			// Criar datasources e gateways necessários
+			orderDataSource := data_source.NewGormOrderDataSource()
+			orderStatusDataSource := data_source.NewGormOrderStatusDataSource()
+			orderGateway := gateways.NewOrderGateway(orderDataSource)
+			orderStatusGateway := gateways.NewOrderStatusGateway(orderStatusDataSource)
+			
+			// Criar consumer para atualizações de pedidos vindas do Kitchen Order
+			orderUpdatesConsumer := consumers.NewOrderUpdatesConsumer(broker, orderGateway, orderStatusGateway)
+			
+			go func() {
+				if err := orderUpdatesConsumer.Start(ctx); err != nil {
+					log.Printf("Failed to start order updates consumer: %v", err)
+				}
+			}()
+			
+			log.Println("Order updates consumer started successfully")
 		}
 	}
 

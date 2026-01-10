@@ -66,8 +66,9 @@ func (m *mockOrderDS) Delete(id string) error {
 }
 
 type mockOrderStatusDS struct {
-	findByIDFunc func(id string) (daos.OrderStatusDAO, error)
-	findAllFunc  func() ([]daos.OrderStatusDAO, error)
+	findByIDFunc   func(id string) (daos.OrderStatusDAO, error)
+	findByNameFunc func(name string) (daos.OrderStatusDAO, error)
+	findAllFunc    func() ([]daos.OrderStatusDAO, error)
 }
 
 func (m *mockOrderStatusDS) FindByID(id string) (daos.OrderStatusDAO, error) {
@@ -75,6 +76,13 @@ func (m *mockOrderStatusDS) FindByID(id string) (daos.OrderStatusDAO, error) {
 		return m.findByIDFunc(id)
 	}
 	return daos.OrderStatusDAO{ID: "status-1", Name: "Pending"}, nil
+}
+
+func (m *mockOrderStatusDS) FindByName(name string) (daos.OrderStatusDAO, error) {
+	if m.findByNameFunc != nil {
+		return m.findByNameFunc(name)
+	}
+	return daos.OrderStatusDAO{ID: "status-1", Name: name}, nil
 }
 
 func (m *mockOrderStatusDS) FindAll() ([]daos.OrderStatusDAO, error) {

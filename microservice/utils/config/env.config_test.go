@@ -157,12 +157,10 @@ func TestConfig_Load_WithDefaults(t *testing.T) {
 	os.Setenv("DB_PASSWORD", "test_pass")
 
 	os.Unsetenv("MESSAGE_BROKER_TYPE")
-	os.Unsetenv("SQS_PAYMENT_QUEUE_URL")
-	os.Unsetenv("SQS_KITCHEN_QUEUE_URL")
+	os.Unsetenv("SQS_ORDERS_QUEUE_URL")
 	os.Unsetenv("AWS_REGION")
 	os.Unsetenv("RABBITMQ_URL")
-	os.Unsetenv("RABBITMQ_PAYMENT_QUEUE")
-	os.Unsetenv("RABBITMQ_KITCHEN_QUEUE")
+	os.Unsetenv("RABBITMQ_ORDERS_QUEUE")
 
 	defer func() {
 		os.Unsetenv("GO_ENV")
@@ -183,12 +181,8 @@ func TestConfig_Load_WithDefaults(t *testing.T) {
 		t.Errorf("Expected default MessageBroker.Type 'sqs', got '%s'", config.MessageBroker.Type)
 	}
 
-	if config.MessageBroker.SQS.PaymentQueueURL != "" {
-		t.Errorf("Expected empty default SQS PaymentQueueURL, got '%s'", config.MessageBroker.SQS.PaymentQueueURL)
-	}
-
-	if config.MessageBroker.SQS.KitchenQueueURL != "" {
-		t.Errorf("Expected empty default SQS KitchenQueueURL, got '%s'", config.MessageBroker.SQS.KitchenQueueURL)
+	if config.MessageBroker.SQS.OrdersQueueURL != "" {
+		t.Errorf("Expected empty default SQS OrdersQueueURL, got '%s'", config.MessageBroker.SQS.OrdersQueueURL)
 	}
 
 	if config.MessageBroker.SQS.AWSRegion != "us-east-2" {
@@ -199,12 +193,8 @@ func TestConfig_Load_WithDefaults(t *testing.T) {
 		t.Errorf("Expected default RabbitMQ URL, got '%s'", config.MessageBroker.RabbitMQ.URL)
 	}
 
-	if config.MessageBroker.RabbitMQ.PaymentQueue != "payment.confirmation" {
-		t.Errorf("Expected default RabbitMQ PaymentQueue, got '%s'", config.MessageBroker.RabbitMQ.PaymentQueue)
-	}
-
-	if config.MessageBroker.RabbitMQ.KitchenQueue != "kitchen.orders" {
-		t.Errorf("Expected default RabbitMQ KitchenQueue, got '%s'", config.MessageBroker.RabbitMQ.KitchenQueue)
+	if config.MessageBroker.RabbitMQ.OrdersQueue != "orders.updates" {
+		t.Errorf("Expected default RabbitMQ OrdersQueue, got '%s'", config.MessageBroker.RabbitMQ.OrdersQueue)
 	}
 }
 

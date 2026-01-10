@@ -16,4 +16,5 @@ type IOrderGateway interface {
 type IOrderStatusGateway interface {
 	FindAll() ([]entities.OrderStatus, error)
 	FindByID(id string) (*entities.OrderStatus, error)
+	FindByName(name string) (*entities.OrderStatus, error)
 }

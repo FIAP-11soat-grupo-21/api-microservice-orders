@@ -63,6 +63,18 @@ func (c *OrderController) Update(dto dtos.UpdateOrderDTO) (dtos.OrderResponseDTO
 	return presenters.ToOrderResponse(order), nil
 }
 
+func (c *OrderController) UpdateStatus(dto dtos.UpdateOrderStatusDTO) (dtos.OrderResponseDTO, error) {
+	useCase := use_cases.NewUpdateOrderStatusUseCase(&c.orderGateway, &c.orderStatusGateway)
+	result, err := useCase.Execute(use_cases.UpdateOrderStatusDTO{
+		OrderID: dto.OrderID,
+		Status:  dto.Status,
+	})
+	if err != nil {
+		return dtos.OrderResponseDTO{}, err
+	}
+	return presenters.ToOrderResponse(result.Order), nil
+}
+
 func (c *OrderController) Delete(id string) error {
 	useCase := use_cases.NewDeleteOrderUseCase(c.orderGateway)
 	return useCase.Execute(id)

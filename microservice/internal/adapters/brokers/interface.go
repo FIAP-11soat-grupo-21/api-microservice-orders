@@ -5,39 +5,31 @@ import (
 	"time"
 )
 
-type PaymentConfirmationMessage struct {
-	Type          string                 `json:"type"`
-	OrderID       string                 `json:"order_id"`
-	PaymentID     string                 `json:"payment_id"`
-	Amount        float64                `json:"amount"`
-	Status        string                 `json:"status"`
-	ProcessedAt   time.Time              `json:"processed_at"`
-	PaymentMethod string                 `json:"payment_method,omitempty"`
-	Metadata      map[string]interface{} `json:"metadata,omitempty"`
+type OrderUpdateMessage struct {
+	Type      string                 `json:"type"`
+	OrderID   string                 `json:"order_id"`
+	Status    string                 `json:"status"`
+	UpdatedAt time.Time              `json:"updated_at"`
+	Metadata  map[string]interface{} `json:"metadata,omitempty"`
 }
 
 type MessageBroker interface {
-	ConsumePaymentConfirmations(ctx context.Context, handler PaymentConfirmationHandler) error
-
-	SendToKitchen(message map[string]interface{}) error
-
+	ConsumeOrderUpdates(ctx context.Context, handler OrderUpdateHandler) error
 	Close() error
 }
 
-type PaymentConfirmationHandler func(message PaymentConfirmationMessage) error
+type OrderUpdateHandler func(message OrderUpdateMessage) error
 
 type BrokerConfig struct {
 	Type string
 
 	// SQS Config
-	SQSPaymentQueueURL string
-	SQSKitchenQueueURL string
-	AWSRegion          string
+	SQSOrdersQueueURL string
+	AWSRegion         string
 
 	// RabbitMQ
-	RabbitMQURL          string
-	RabbitMQPaymentQueue string
-	RabbitMQKitchenQueue string
+	RabbitMQURL         string
+	RabbitMQOrdersQueue string
 }
 
 type BrokerFactory interface {
