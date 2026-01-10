@@ -11,7 +11,9 @@ test:
 
 test-coverage:
 	go test -v -coverprofile=coverage.out ./...
-	go tool cover -html=coverage.out -o coverage.html
+	@grep -v "test_helpers" coverage.out > coverage.filtered.out || true
+	go tool cover -html=coverage.filtered.out -o coverage.html
+	@rm -f coverage.filtered.out
 
 clean:
 	rm -rf bin/

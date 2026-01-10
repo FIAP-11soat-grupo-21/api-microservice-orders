@@ -7,54 +7,11 @@ import (
 
 	"microservice/internal/adapters/daos"
 	"microservice/internal/adapters/dtos"
-	"microservice/internal/domain/entities"
+	"microservice/internal/test_helpers"
 )
 
-type mockOrderDataSource struct {
-	createFunc   func(order daos.OrderDAO) error
-	findAllFunc  func(filter dtos.OrderFilterDTO) ([]daos.OrderDAO, error)
-	findByIDFunc func(id string) (daos.OrderDAO, error)
-	updateFunc   func(order daos.OrderDAO) error
-	deleteFunc   func(id string) error
-}
-
-func (m *mockOrderDataSource) Create(order daos.OrderDAO) error {
-	if m.createFunc != nil {
-		return m.createFunc(order)
-	}
-	return nil
-}
-
-func (m *mockOrderDataSource) FindAll(filter dtos.OrderFilterDTO) ([]daos.OrderDAO, error) {
-	if m.findAllFunc != nil {
-		return m.findAllFunc(filter)
-	}
-	return []daos.OrderDAO{}, nil
-}
-
-func (m *mockOrderDataSource) FindByID(id string) (daos.OrderDAO, error) {
-	if m.findByIDFunc != nil {
-		return m.findByIDFunc(id)
-	}
-	return daos.OrderDAO{}, nil
-}
-
-func (m *mockOrderDataSource) Update(order daos.OrderDAO) error {
-	if m.updateFunc != nil {
-		return m.updateFunc(order)
-	}
-	return nil
-}
-
-func (m *mockOrderDataSource) Delete(id string) error {
-	if m.deleteFunc != nil {
-		return m.deleteFunc(id)
-	}
-	return nil
-}
-
 func TestNewOrderGateway(t *testing.T) {
-	ds := &mockOrderDataSource{}
+	ds := &test_helpers.MockOrderDataSource{}
 	gateway := NewOrderGateway(ds)
 
 	if gateway == nil {
@@ -62,26 +19,17 @@ func TestNewOrderGateway(t *testing.T) {
 	}
 }
 
-func createTestOrderEntity() entities.Order {
-	customerID := "customer-123"
-	status, _ := entities.NewOrderStatus("status-1", "Pending")
-	item, _ := entities.NewOrderItem("item-1", "product-1", "order-1", 2, 10.0)
-	now := time.Now()
-	order, _ := entities.NewOrderWithItems("order-1", &customerID, 20.0, *status, []entities.OrderItem{*item}, now, nil)
-	return *order
-}
-
 func TestOrderGateway_Create_Success(t *testing.T) {
 	createCalled := false
-	ds := &mockOrderDataSource{
-		createFunc: func(order daos.OrderDAO) error {
+	ds := &test_helpers.MockOrderDataSource{
+		CreateFunc: func(order daos.OrderDAO) error {
 			createCalled = true
 			return nil
 		},
 	}
 
 	gateway := NewOrderGateway(ds)
-	order := createTestOrderEntity()
+	order := test_helpers.CreateTestOrderEntity()
 
 	err := gateway.Create(order)
 
@@ -94,14 +42,14 @@ func TestOrderGateway_Create_Success(t *testing.T) {
 }
 
 func TestOrderGateway_Create_Error(t *testing.T) {
-	ds := &mockOrderDataSource{
-		createFunc: func(order daos.OrderDAO) error {
+	ds := &test_helpers.MockOrderDataSource{
+		CreateFunc: func(order daos.OrderDAO) error {
 			return errors.New("database error")
 		},
 	}
 
 	gateway := NewOrderGateway(ds)
-	order := createTestOrderEntity()
+	order := test_helpers.CreateTestOrderEntity()
 
 	err := gateway.Create(order)
 
@@ -114,8 +62,8 @@ func TestOrderGateway_FindByID_Success(t *testing.T) {
 	customerID := "customer-123"
 	now := time.Now()
 
-	ds := &mockOrderDataSource{
-		findByIDFunc: func(id string) (daos.OrderDAO, error) {
+	ds := &test_helpers.MockOrderDataSource{
+		FindByIDFunc: func(id string) (daos.OrderDAO, error) {
 			return daos.OrderDAO{
 				ID:         "order-1",
 				CustomerID: &customerID,
@@ -153,8 +101,8 @@ func TestOrderGateway_FindByID_Success(t *testing.T) {
 }
 
 func TestOrderGateway_FindByID_Error(t *testing.T) {
-	ds := &mockOrderDataSource{
-		findByIDFunc: func(id string) (daos.OrderDAO, error) {
+	ds := &test_helpers.MockOrderDataSource{
+		FindByIDFunc: func(id string) (daos.OrderDAO, error) {
 			return daos.OrderDAO{}, errors.New("not found")
 		},
 	}
@@ -170,8 +118,8 @@ func TestOrderGateway_FindByID_Error(t *testing.T) {
 func TestOrderGateway_FindByID_InvalidStatus(t *testing.T) {
 	now := time.Now()
 
-	ds := &mockOrderDataSource{
-		findByIDFunc: func(id string) (daos.OrderDAO, error) {
+	ds := &test_helpers.MockOrderDataSource{
+		FindByIDFunc: func(id string) (daos.OrderDAO, error) {
 			return daos.OrderDAO{
 				ID:        "order-1",
 				Amount:    20.0,
@@ -193,8 +141,8 @@ func TestOrderGateway_FindByID_InvalidStatus(t *testing.T) {
 func TestOrderGateway_FindByID_InvalidItem(t *testing.T) {
 	now := time.Now()
 
-	ds := &mockOrderDataSource{
-		findByIDFunc: func(id string) (daos.OrderDAO, error) {
+	ds := &test_helpers.MockOrderDataSource{
+		FindByIDFunc: func(id string) (daos.OrderDAO, error) {
 			return daos.OrderDAO{
 				ID:     "order-1",
 				Amount: 20.0,
@@ -218,8 +166,8 @@ func TestOrderGateway_FindByID_InvalidItem(t *testing.T) {
 func TestOrderGateway_FindByID_InvalidAmount(t *testing.T) {
 	now := time.Now()
 
-	ds := &mockOrderDataSource{
-		findByIDFunc: func(id string) (daos.OrderDAO, error) {
+	ds := &test_helpers.MockOrderDataSource{
+		FindByIDFunc: func(id string) (daos.OrderDAO, error) {
 			return daos.OrderDAO{
 				ID:        "order-1",
 				Amount:    -10.0, // Invalid amount
@@ -242,8 +190,8 @@ func TestOrderGateway_FindAll_Success(t *testing.T) {
 	customerID := "customer-123"
 	now := time.Now()
 
-	ds := &mockOrderDataSource{
-		findAllFunc: func(filter dtos.OrderFilterDTO) ([]daos.OrderDAO, error) {
+	ds := &test_helpers.MockOrderDataSource{
+		FindAllFunc: func(filter dtos.OrderFilterDTO) ([]daos.OrderDAO, error) {
 			return []daos.OrderDAO{
 				{
 					ID:         "order-1",
@@ -271,8 +219,8 @@ func TestOrderGateway_FindAll_Success(t *testing.T) {
 }
 
 func TestOrderGateway_FindAll_Error(t *testing.T) {
-	ds := &mockOrderDataSource{
-		findAllFunc: func(filter dtos.OrderFilterDTO) ([]daos.OrderDAO, error) {
+	ds := &test_helpers.MockOrderDataSource{
+		FindAllFunc: func(filter dtos.OrderFilterDTO) ([]daos.OrderDAO, error) {
 			return nil, errors.New("database error")
 		},
 	}
@@ -288,8 +236,8 @@ func TestOrderGateway_FindAll_Error(t *testing.T) {
 func TestOrderGateway_FindAll_InvalidStatus(t *testing.T) {
 	now := time.Now()
 
-	ds := &mockOrderDataSource{
-		findAllFunc: func(filter dtos.OrderFilterDTO) ([]daos.OrderDAO, error) {
+	ds := &test_helpers.MockOrderDataSource{
+		FindAllFunc: func(filter dtos.OrderFilterDTO) ([]daos.OrderDAO, error) {
 			return []daos.OrderDAO{
 				{
 					ID:        "order-1",
@@ -313,8 +261,8 @@ func TestOrderGateway_FindAll_InvalidStatus(t *testing.T) {
 func TestOrderGateway_FindAll_InvalidItem(t *testing.T) {
 	now := time.Now()
 
-	ds := &mockOrderDataSource{
-		findAllFunc: func(filter dtos.OrderFilterDTO) ([]daos.OrderDAO, error) {
+	ds := &test_helpers.MockOrderDataSource{
+		FindAllFunc: func(filter dtos.OrderFilterDTO) ([]daos.OrderDAO, error) {
 			return []daos.OrderDAO{
 				{
 					ID:     "order-1",
@@ -340,8 +288,8 @@ func TestOrderGateway_FindAll_InvalidItem(t *testing.T) {
 func TestOrderGateway_FindAll_InvalidOrderAmount(t *testing.T) {
 	now := time.Now()
 
-	ds := &mockOrderDataSource{
-		findAllFunc: func(filter dtos.OrderFilterDTO) ([]daos.OrderDAO, error) {
+	ds := &test_helpers.MockOrderDataSource{
+		FindAllFunc: func(filter dtos.OrderFilterDTO) ([]daos.OrderDAO, error) {
 			return []daos.OrderDAO{
 				{
 					ID:        "order-1",
@@ -364,15 +312,15 @@ func TestOrderGateway_FindAll_InvalidOrderAmount(t *testing.T) {
 
 func TestOrderGateway_Update_Success(t *testing.T) {
 	updateCalled := false
-	ds := &mockOrderDataSource{
-		updateFunc: func(order daos.OrderDAO) error {
+	ds := &test_helpers.MockOrderDataSource{
+		UpdateFunc: func(order daos.OrderDAO) error {
 			updateCalled = true
 			return nil
 		},
 	}
 
 	gateway := NewOrderGateway(ds)
-	order := createTestOrderEntity()
+	order := test_helpers.CreateTestOrderEntity()
 
 	err := gateway.Update(order)
 
@@ -385,14 +333,14 @@ func TestOrderGateway_Update_Success(t *testing.T) {
 }
 
 func TestOrderGateway_Update_Error(t *testing.T) {
-	ds := &mockOrderDataSource{
-		updateFunc: func(order daos.OrderDAO) error {
+	ds := &test_helpers.MockOrderDataSource{
+		UpdateFunc: func(order daos.OrderDAO) error {
 			return errors.New("database error")
 		},
 	}
 
 	gateway := NewOrderGateway(ds)
-	order := createTestOrderEntity()
+	order := test_helpers.CreateTestOrderEntity()
 
 	err := gateway.Update(order)
 
@@ -403,8 +351,8 @@ func TestOrderGateway_Update_Error(t *testing.T) {
 
 func TestOrderGateway_Delete_Success(t *testing.T) {
 	deleteCalled := false
-	ds := &mockOrderDataSource{
-		deleteFunc: func(id string) error {
+	ds := &test_helpers.MockOrderDataSource{
+		DeleteFunc: func(id string) error {
 			deleteCalled = true
 			return nil
 		},
@@ -422,8 +370,8 @@ func TestOrderGateway_Delete_Success(t *testing.T) {
 }
 
 func TestOrderGateway_Delete_Error(t *testing.T) {
-	ds := &mockOrderDataSource{
-		deleteFunc: func(id string) error {
+	ds := &test_helpers.MockOrderDataSource{
+		DeleteFunc: func(id string) error {
 			return errors.New("database error")
 		},
 	}

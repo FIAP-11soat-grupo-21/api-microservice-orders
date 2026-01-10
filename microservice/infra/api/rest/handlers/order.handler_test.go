@@ -14,94 +14,17 @@ import (
 	"microservice/infra/api/rest/schemas"
 	"microservice/internal/adapters/daos"
 	"microservice/internal/adapters/dtos"
-	"microservice/internal/interfaces"
-	"microservice/utils/factories"
+	"microservice/internal/test_helpers"
 )
 
 func init() {
 	gin.SetMode(gin.TestMode)
 }
 
-type mockOrderDS struct {
-	createFunc   func(order daos.OrderDAO) error
-	findAllFunc  func(filter dtos.OrderFilterDTO) ([]daos.OrderDAO, error)
-	findByIDFunc func(id string) (daos.OrderDAO, error)
-	updateFunc   func(order daos.OrderDAO) error
-	deleteFunc   func(id string) error
-}
-
-func (m *mockOrderDS) Create(order daos.OrderDAO) error {
-	if m.createFunc != nil {
-		return m.createFunc(order)
-	}
-	return nil
-}
-
-func (m *mockOrderDS) FindAll(filter dtos.OrderFilterDTO) ([]daos.OrderDAO, error) {
-	if m.findAllFunc != nil {
-		return m.findAllFunc(filter)
-	}
-	return []daos.OrderDAO{}, nil
-}
-
-func (m *mockOrderDS) FindByID(id string) (daos.OrderDAO, error) {
-	if m.findByIDFunc != nil {
-		return m.findByIDFunc(id)
-	}
-	return daos.OrderDAO{}, nil
-}
-
-func (m *mockOrderDS) Update(order daos.OrderDAO) error {
-	if m.updateFunc != nil {
-		return m.updateFunc(order)
-	}
-	return nil
-}
-
-func (m *mockOrderDS) Delete(id string) error {
-	if m.deleteFunc != nil {
-		return m.deleteFunc(id)
-	}
-	return nil
-}
-
-type mockOrderStatusDS struct {
-	findByIDFunc func(id string) (daos.OrderStatusDAO, error)
-	findAllFunc  func() ([]daos.OrderStatusDAO, error)
-}
-
-func (m *mockOrderStatusDS) FindByID(id string) (daos.OrderStatusDAO, error) {
-	if m.findByIDFunc != nil {
-		return m.findByIDFunc(id)
-	}
-	return daos.OrderStatusDAO{ID: "status-1", Name: "Pending"}, nil
-}
-
-func (m *mockOrderStatusDS) FindAll() ([]daos.OrderStatusDAO, error) {
-	if m.findAllFunc != nil {
-		return m.findAllFunc()
-	}
-	return []daos.OrderStatusDAO{}, nil
-}
-
-func setupMocks(orderDS *mockOrderDS, statusDS *mockOrderStatusDS) func() {
-	factories.SetNewOrderDataSource(func() interfaces.IOrderDataSource {
-		return orderDS
-	})
-	factories.SetNewOrderStatusDataSource(func() interfaces.IOrderStatusDataSource {
-		return statusDS
-	})
-
-	return func() {
-		factories.SetNewOrderDataSource(nil)
-		factories.SetNewOrderStatusDataSource(nil)
-	}
-}
-
 func TestNewOrderHandler(t *testing.T) {
-	orderDS := &mockOrderDS{}
-	statusDS := &mockOrderStatusDS{}
-	cleanup := setupMocks(orderDS, statusDS)
+	orderDS := &test_helpers.MockOrderDataSource{}
+	statusDS := &test_helpers.MockOrderStatusDataSource{}
+	cleanup := SetupTestMocks(orderDS, statusDS)
 	defer cleanup()
 
 	handler := NewOrderHandler()
@@ -111,17 +34,17 @@ func TestNewOrderHandler(t *testing.T) {
 }
 
 func TestOrderHandler_Create_Success(t *testing.T) {
-	orderDS := &mockOrderDS{
-		createFunc: func(order daos.OrderDAO) error {
+	orderDS := &test_helpers.MockOrderDataSource{
+		CreateFunc: func(order daos.OrderDAO) error {
 			return nil
 		},
 	}
-	statusDS := &mockOrderStatusDS{
-		findByIDFunc: func(id string) (daos.OrderStatusDAO, error) {
+	statusDS := &test_helpers.MockOrderStatusDataSource{
+		FindByIDFunc: func(id string) (daos.OrderStatusDAO, error) {
 			return daos.OrderStatusDAO{ID: "status-1", Name: "Pending"}, nil
 		},
 	}
-	cleanup := setupMocks(orderDS, statusDS)
+	cleanup := SetupTestMocks(orderDS, statusDS)
 	defer cleanup()
 
 	handler := NewOrderHandler()
@@ -148,9 +71,9 @@ func TestOrderHandler_Create_Success(t *testing.T) {
 }
 
 func TestOrderHandler_Create_InvalidBody(t *testing.T) {
-	orderDS := &mockOrderDS{}
-	statusDS := &mockOrderStatusDS{}
-	cleanup := setupMocks(orderDS, statusDS)
+	orderDS := &test_helpers.MockOrderDataSource{}
+	statusDS := &test_helpers.MockOrderStatusDataSource{}
+	cleanup := SetupTestMocks(orderDS, statusDS)
 	defer cleanup()
 
 	handler := NewOrderHandler()
@@ -173,8 +96,8 @@ func TestOrderHandler_FindAll_Success(t *testing.T) {
 	customerID := "customer-123"
 	now := time.Now()
 
-	orderDS := &mockOrderDS{
-		findAllFunc: func(filter dtos.OrderFilterDTO) ([]daos.OrderDAO, error) {
+	orderDS := &test_helpers.MockOrderDataSource{
+		FindAllFunc: func(filter dtos.OrderFilterDTO) ([]daos.OrderDAO, error) {
 			return []daos.OrderDAO{
 				{
 					ID:         "order-1",
@@ -189,8 +112,8 @@ func TestOrderHandler_FindAll_Success(t *testing.T) {
 			}, nil
 		},
 	}
-	statusDS := &mockOrderStatusDS{}
-	cleanup := setupMocks(orderDS, statusDS)
+	statusDS := &test_helpers.MockOrderStatusDataSource{}
+	cleanup := SetupTestMocks(orderDS, statusDS)
 	defer cleanup()
 
 	handler := NewOrderHandler()
@@ -209,13 +132,13 @@ func TestOrderHandler_FindAll_Success(t *testing.T) {
 }
 
 func TestOrderHandler_FindAll_WithFilters(t *testing.T) {
-	orderDS := &mockOrderDS{
-		findAllFunc: func(filter dtos.OrderFilterDTO) ([]daos.OrderDAO, error) {
+	orderDS := &test_helpers.MockOrderDataSource{
+		FindAllFunc: func(filter dtos.OrderFilterDTO) ([]daos.OrderDAO, error) {
 			return []daos.OrderDAO{}, nil
 		},
 	}
-	statusDS := &mockOrderStatusDS{}
-	cleanup := setupMocks(orderDS, statusDS)
+	statusDS := &test_helpers.MockOrderStatusDataSource{}
+	cleanup := SetupTestMocks(orderDS, statusDS)
 	defer cleanup()
 
 	handler := NewOrderHandler()
@@ -237,8 +160,8 @@ func TestOrderHandler_FindByID_Success(t *testing.T) {
 	customerID := "customer-123"
 	now := time.Now()
 
-	orderDS := &mockOrderDS{
-		findByIDFunc: func(id string) (daos.OrderDAO, error) {
+	orderDS := &test_helpers.MockOrderDataSource{
+		FindByIDFunc: func(id string) (daos.OrderDAO, error) {
 			return daos.OrderDAO{
 				ID:         "550e8400-e29b-41d4-a716-446655440000",
 				CustomerID: &customerID,
@@ -251,8 +174,8 @@ func TestOrderHandler_FindByID_Success(t *testing.T) {
 			}, nil
 		},
 	}
-	statusDS := &mockOrderStatusDS{}
-	cleanup := setupMocks(orderDS, statusDS)
+	statusDS := &test_helpers.MockOrderStatusDataSource{}
+	cleanup := SetupTestMocks(orderDS, statusDS)
 	defer cleanup()
 
 	handler := NewOrderHandler()
@@ -274,8 +197,8 @@ func TestOrderHandler_Update_Success(t *testing.T) {
 	customerID := "customer-123"
 	now := time.Now()
 
-	orderDS := &mockOrderDS{
-		findByIDFunc: func(id string) (daos.OrderDAO, error) {
+	orderDS := &test_helpers.MockOrderDataSource{
+		FindByIDFunc: func(id string) (daos.OrderDAO, error) {
 			return daos.OrderDAO{
 				ID:         "550e8400-e29b-41d4-a716-446655440000",
 				CustomerID: &customerID,
@@ -287,16 +210,16 @@ func TestOrderHandler_Update_Success(t *testing.T) {
 				CreatedAt: now,
 			}, nil
 		},
-		updateFunc: func(order daos.OrderDAO) error {
+		UpdateFunc: func(order daos.OrderDAO) error {
 			return nil
 		},
 	}
-	statusDS := &mockOrderStatusDS{
-		findByIDFunc: func(id string) (daos.OrderStatusDAO, error) {
+	statusDS := &test_helpers.MockOrderStatusDataSource{
+		FindByIDFunc: func(id string) (daos.OrderStatusDAO, error) {
 			return daos.OrderStatusDAO{ID: "status-2", Name: "Confirmed"}, nil
 		},
 	}
-	cleanup := setupMocks(orderDS, statusDS)
+	cleanup := SetupTestMocks(orderDS, statusDS)
 	defer cleanup()
 
 	handler := NewOrderHandler()
@@ -319,9 +242,9 @@ func TestOrderHandler_Update_Success(t *testing.T) {
 }
 
 func TestOrderHandler_Update_InvalidBody(t *testing.T) {
-	orderDS := &mockOrderDS{}
-	statusDS := &mockOrderStatusDS{}
-	cleanup := setupMocks(orderDS, statusDS)
+	orderDS := &test_helpers.MockOrderDataSource{}
+	statusDS := &test_helpers.MockOrderStatusDataSource{}
+	cleanup := SetupTestMocks(orderDS, statusDS)
 	defer cleanup()
 
 	handler := NewOrderHandler()
@@ -344,8 +267,8 @@ func TestOrderHandler_Delete_Success(t *testing.T) {
 	customerID := "customer-123"
 	now := time.Now()
 
-	orderDS := &mockOrderDS{
-		findByIDFunc: func(id string) (daos.OrderDAO, error) {
+	orderDS := &test_helpers.MockOrderDataSource{
+		FindByIDFunc: func(id string) (daos.OrderDAO, error) {
 			return daos.OrderDAO{
 				ID:         "550e8400-e29b-41d4-a716-446655440000",
 				CustomerID: &customerID,
@@ -355,12 +278,12 @@ func TestOrderHandler_Delete_Success(t *testing.T) {
 				CreatedAt:  now,
 			}, nil
 		},
-		deleteFunc: func(id string) error {
+		DeleteFunc: func(id string) error {
 			return nil
 		},
 	}
-	statusDS := &mockOrderStatusDS{}
-	cleanup := setupMocks(orderDS, statusDS)
+	statusDS := &test_helpers.MockOrderStatusDataSource{}
+	cleanup := SetupTestMocks(orderDS, statusDS)
 	defer cleanup()
 
 	handler := NewOrderHandler()
@@ -379,16 +302,16 @@ func TestOrderHandler_Delete_Success(t *testing.T) {
 }
 
 func TestOrderHandler_FindAllStatus_Success(t *testing.T) {
-	orderDS := &mockOrderDS{}
-	statusDS := &mockOrderStatusDS{
-		findAllFunc: func() ([]daos.OrderStatusDAO, error) {
+	orderDS := &test_helpers.MockOrderDataSource{}
+	statusDS := &test_helpers.MockOrderStatusDataSource{
+		FindAllFunc: func() ([]daos.OrderStatusDAO, error) {
 			return []daos.OrderStatusDAO{
 				{ID: "status-1", Name: "Pending"},
 				{ID: "status-2", Name: "Confirmed"},
 			}, nil
 		},
 	}
-	cleanup := setupMocks(orderDS, statusDS)
+	cleanup := SetupTestMocks(orderDS, statusDS)
 	defer cleanup()
 
 	handler := NewOrderHandler()
@@ -442,13 +365,13 @@ func TestToOrderResponse(t *testing.T) {
 }
 
 func TestOrderHandler_Create_Error(t *testing.T) {
-	orderDS := &mockOrderDS{}
-	statusDS := &mockOrderStatusDS{
-		findByIDFunc: func(id string) (daos.OrderStatusDAO, error) {
+	orderDS := &test_helpers.MockOrderDataSource{}
+	statusDS := &test_helpers.MockOrderStatusDataSource{
+		FindByIDFunc: func(id string) (daos.OrderStatusDAO, error) {
 			return daos.OrderStatusDAO{}, errors.New("status not found")
 		},
 	}
-	cleanup := setupMocks(orderDS, statusDS)
+	cleanup := SetupTestMocks(orderDS, statusDS)
 	defer cleanup()
 
 	handler := NewOrderHandler()
@@ -475,13 +398,13 @@ func TestOrderHandler_Create_Error(t *testing.T) {
 }
 
 func TestOrderHandler_FindAll_Error(t *testing.T) {
-	orderDS := &mockOrderDS{
-		findAllFunc: func(filter dtos.OrderFilterDTO) ([]daos.OrderDAO, error) {
+	orderDS := &test_helpers.MockOrderDataSource{
+		FindAllFunc: func(filter dtos.OrderFilterDTO) ([]daos.OrderDAO, error) {
 			return nil, errors.New("database error")
 		},
 	}
-	statusDS := &mockOrderStatusDS{}
-	cleanup := setupMocks(orderDS, statusDS)
+	statusDS := &test_helpers.MockOrderStatusDataSource{}
+	cleanup := SetupTestMocks(orderDS, statusDS)
 	defer cleanup()
 
 	handler := NewOrderHandler()
@@ -500,13 +423,13 @@ func TestOrderHandler_FindAll_Error(t *testing.T) {
 }
 
 func TestOrderHandler_FindByID_Error(t *testing.T) {
-	orderDS := &mockOrderDS{
-		findByIDFunc: func(id string) (daos.OrderDAO, error) {
+	orderDS := &test_helpers.MockOrderDataSource{
+		FindByIDFunc: func(id string) (daos.OrderDAO, error) {
 			return daos.OrderDAO{}, errors.New("not found")
 		},
 	}
-	statusDS := &mockOrderStatusDS{}
-	cleanup := setupMocks(orderDS, statusDS)
+	statusDS := &test_helpers.MockOrderStatusDataSource{}
+	cleanup := SetupTestMocks(orderDS, statusDS)
 	defer cleanup()
 
 	handler := NewOrderHandler()
@@ -525,13 +448,13 @@ func TestOrderHandler_FindByID_Error(t *testing.T) {
 }
 
 func TestOrderHandler_Update_Error(t *testing.T) {
-	orderDS := &mockOrderDS{
-		findByIDFunc: func(id string) (daos.OrderDAO, error) {
+	orderDS := &test_helpers.MockOrderDataSource{
+		FindByIDFunc: func(id string) (daos.OrderDAO, error) {
 			return daos.OrderDAO{}, errors.New("not found")
 		},
 	}
-	statusDS := &mockOrderStatusDS{}
-	cleanup := setupMocks(orderDS, statusDS)
+	statusDS := &test_helpers.MockOrderStatusDataSource{}
+	cleanup := SetupTestMocks(orderDS, statusDS)
 	defer cleanup()
 
 	handler := NewOrderHandler()
@@ -554,13 +477,13 @@ func TestOrderHandler_Update_Error(t *testing.T) {
 }
 
 func TestOrderHandler_Delete_Error(t *testing.T) {
-	orderDS := &mockOrderDS{
-		findByIDFunc: func(id string) (daos.OrderDAO, error) {
+	orderDS := &test_helpers.MockOrderDataSource{
+		FindByIDFunc: func(id string) (daos.OrderDAO, error) {
 			return daos.OrderDAO{}, errors.New("not found")
 		},
 	}
-	statusDS := &mockOrderStatusDS{}
-	cleanup := setupMocks(orderDS, statusDS)
+	statusDS := &test_helpers.MockOrderStatusDataSource{}
+	cleanup := SetupTestMocks(orderDS, statusDS)
 	defer cleanup()
 
 	handler := NewOrderHandler()
@@ -579,13 +502,13 @@ func TestOrderHandler_Delete_Error(t *testing.T) {
 }
 
 func TestOrderHandler_FindAllStatus_Error(t *testing.T) {
-	orderDS := &mockOrderDS{}
-	statusDS := &mockOrderStatusDS{
-		findAllFunc: func() ([]daos.OrderStatusDAO, error) {
+	orderDS := &test_helpers.MockOrderDataSource{}
+	statusDS := &test_helpers.MockOrderStatusDataSource{
+		FindAllFunc: func() ([]daos.OrderStatusDAO, error) {
 			return nil, errors.New("database error")
 		},
 	}
-	cleanup := setupMocks(orderDS, statusDS)
+	cleanup := SetupTestMocks(orderDS, statusDS)
 	defer cleanup()
 
 	handler := NewOrderHandler()
