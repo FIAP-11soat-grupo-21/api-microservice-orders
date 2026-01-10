@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"microservice/internal/adapters/dtos"
+	"microservice/internal/domain/entities"
 )
 
 func TestFindAllOrdersUseCase_FilterDTOStructure(t *testing.T) {
@@ -34,69 +35,40 @@ func TestFindAllOrdersUseCase_FilterDTOStructure(t *testing.T) {
 	}
 }
 
-func TestFindAllOrdersUseCase_EmptyFilter(t *testing.T) {
-	filter := dtos.OrderFilterDTO{}
+func TestFindAllOrdersUseCase_FilterDTONilValues(t *testing.T) {
+	filter := dtos.OrderFilterDTO{
+		CustomerID:    nil,
+		StatusID:      nil,
+		CreatedAtFrom: nil,
+		CreatedAtTo:   nil,
+	}
 
 	if filter.CustomerID != nil {
-		t.Errorf("Empty OrderFilterDTO.CustomerID = %v, want nil", filter.CustomerID)
+		t.Error("OrderFilterDTO.CustomerID should be nil")
 	}
 	if filter.StatusID != nil {
-		t.Errorf("Empty OrderFilterDTO.StatusID = %v, want nil", filter.StatusID)
+		t.Error("OrderFilterDTO.StatusID should be nil")
 	}
 	if filter.CreatedAtFrom != nil {
-		t.Errorf("Empty OrderFilterDTO.CreatedAtFrom = %v, want nil", filter.CreatedAtFrom)
+		t.Error("OrderFilterDTO.CreatedAtFrom should be nil")
 	}
 	if filter.CreatedAtTo != nil {
-		t.Errorf("Empty OrderFilterDTO.CreatedAtTo = %v, want nil", filter.CreatedAtTo)
+		t.Error("OrderFilterDTO.CreatedAtTo should be nil")
 	}
 }
 
-func TestFindAllOrdersUseCase_PartialFilter(t *testing.T) {
-	statusID := "status-1"
-
-	filter := dtos.OrderFilterDTO{
-		StatusID: &statusID,
-	}
-
-	if filter.CustomerID != nil {
-		t.Errorf("Partial OrderFilterDTO.CustomerID = %v, want nil", filter.CustomerID)
-	}
-	if *filter.StatusID != statusID {
-		t.Errorf("Partial OrderFilterDTO.StatusID = %v, want %v", *filter.StatusID, statusID)
-	}
-}
-
-func TestNewFindAllOrdersUseCase(t *testing.T) {
-	_ = NewFindAllOrdersUseCase
-}
-
-func TestFindAllOrdersUseCase_Execute_Success(t *testing.T) {
-	filter := dtos.OrderFilterDTO{}
-
-	if filter.CustomerID != nil {
-		t.Error("Empty filter should have nil CustomerID")
-	}
-
-	if filter.StatusID != nil {
-		t.Error("Empty filter should have nil StatusID")
-	}
-}
-
-func TestFindAllOrdersUseCase_Execute_WithFilter(t *testing.T) {
-	customerID := "customer-1"
-	statusID := "status-1"
-
+func TestFindAllOrdersUseCase_FilterDTOPartialValues(t *testing.T) {
+	customerID := "customer-123"
 	filter := dtos.OrderFilterDTO{
 		CustomerID: &customerID,
-		StatusID:   &statusID,
+		StatusID:   nil,
 	}
 
-	if filter.CustomerID == nil || *filter.CustomerID != customerID {
-		t.Errorf("Expected customer ID '%s', got %v", customerID, filter.CustomerID)
+	if *filter.CustomerID != customerID {
+		t.Errorf("OrderFilterDTO.CustomerID = %v, want %v", *filter.CustomerID, customerID)
 	}
-
-	if filter.StatusID == nil || *filter.StatusID != statusID {
-		t.Errorf("Expected status ID '%s', got %v", statusID, filter.StatusID)
+	if filter.StatusID != nil {
+		t.Error("OrderFilterDTO.StatusID should be nil")
 	}
 }
 
@@ -119,13 +91,96 @@ func TestFindAllOrdersUseCase_Execute_FilterValidation(t *testing.T) {
 				StatusID:   tc.statusID,
 			}
 
-			if tc.customerID == nil && filter.CustomerID != nil {
-				t.Error("Expected nil customer ID")
+			if tc.customerID != nil && *filter.CustomerID != *tc.customerID {
+				t.Errorf("Expected CustomerID %v, got %v", *tc.customerID, *filter.CustomerID)
 			}
-
-			if tc.statusID == nil && filter.StatusID != nil {
-				t.Error("Expected nil status ID")
+			if tc.statusID != nil && *filter.StatusID != *tc.statusID {
+				t.Errorf("Expected StatusID %v, got %v", *tc.statusID, *filter.StatusID)
 			}
 		})
+	}
+}
+
+// Helper function
+func stringPtr(s string) *string {
+	return &s
+}
+
+// Comprehensive tests using mocks for full coverage
+
+func TestFindAllOrdersUseCase_NewFindAllOrdersUseCase(t *testing.T) {
+	mockGateway := NewMockOrderGateway()
+	uc := NewFindAllOrdersUseCase(mockGateway)
+
+	if uc == nil {
+		t.Error("Expected use case to be created")
+	}
+}
+
+func TestFindAllOrdersUseCase_Execute_Success(t *testing.T) {
+	mockGateway := NewMockOrderGateway()
+	uc := NewFindAllOrdersUseCase(mockGateway)
+
+	// Add test orders
+	customerID := "customer-123"
+	status, _ := entities.NewOrderStatus("pending", "Pending")
+	order1, _ := entities.NewOrderWithItems("order-1", &customerID, 25.0, *status, []entities.OrderItem{}, time.Now(), nil)
+	order2, _ := entities.NewOrderWithItems("order-2", &customerID, 35.0, *status, []entities.OrderItem{}, time.Now(), nil)
+	
+	mockGateway.AddOrder(order1)
+	mockGateway.AddOrder(order2)
+
+	filter := dtos.OrderFilterDTO{}
+	orders, err := uc.Execute(filter)
+
+	if err != nil {
+		t.Errorf("Expected no error for successful find all, got %v", err)
+	}
+
+	if len(orders) != 2 {
+		t.Errorf("Expected 2 orders, got %d", len(orders))
+	}
+}
+
+func TestFindAllOrdersUseCase_Execute_EmptyResult(t *testing.T) {
+	mockGateway := NewMockOrderGateway()
+	uc := NewFindAllOrdersUseCase(mockGateway)
+
+	filter := dtos.OrderFilterDTO{}
+	orders, err := uc.Execute(filter)
+
+	if err != nil {
+		t.Errorf("Expected no error for empty result, got %v", err)
+	}
+
+	if len(orders) != 0 {
+		t.Errorf("Expected 0 orders, got %d", len(orders))
+	}
+}
+
+func TestFindAllOrdersUseCase_Execute_WithFilter(t *testing.T) {
+	mockGateway := NewMockOrderGateway()
+	uc := NewFindAllOrdersUseCase(mockGateway)
+
+	// Add test orders
+	customerID := "customer-123"
+	statusID := "pending"
+	status, _ := entities.NewOrderStatus(statusID, "Pending")
+	order, _ := entities.NewOrderWithItems("order-1", &customerID, 25.0, *status, []entities.OrderItem{}, time.Now(), nil)
+	
+	mockGateway.AddOrder(order)
+
+	filter := dtos.OrderFilterDTO{
+		CustomerID: &customerID,
+		StatusID:   &statusID,
+	}
+	orders, err := uc.Execute(filter)
+
+	if err != nil {
+		t.Errorf("Expected no error for filtered find all, got %v", err)
+	}
+
+	if len(orders) != 1 {
+		t.Errorf("Expected 1 order, got %d", len(orders))
 	}
 }

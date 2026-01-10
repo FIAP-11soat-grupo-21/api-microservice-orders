@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"microservice/internal/adapters/dtos"
-	"microservice/internal/adapters/gateways"
 	"microservice/internal/domain/entities"
 	"microservice/internal/domain/exceptions"
 )
@@ -111,9 +110,9 @@ func TestNewUpdateOrderUseCase(t *testing.T) {
 	_ = NewUpdateOrderUseCase
 }
 func TestUpdateOrderUseCase_NewUpdateOrderUseCase(t *testing.T) {
-	orderGateway := gateways.OrderGateway{}
-	statusGateway := gateways.OrderStatusGateway{}
-	uc := NewUpdateOrderUseCase(orderGateway, statusGateway)
+	mockOrderGateway := NewMockOrderGateway()
+	mockStatusGateway := NewMockOrderStatusGateway()
+	uc := NewUpdateOrderUseCase(mockOrderGateway, mockStatusGateway)
 
 	if uc == nil {
 		t.Error("Expected use case to be created")
@@ -121,9 +120,9 @@ func TestUpdateOrderUseCase_NewUpdateOrderUseCase(t *testing.T) {
 }
 
 func TestUpdateOrderUseCase_Execute_InvalidID(t *testing.T) {
-	orderGateway := gateways.OrderGateway{}
-	statusGateway := gateways.OrderStatusGateway{}
-	uc := NewUpdateOrderUseCase(orderGateway, statusGateway)
+	mockOrderGateway := NewMockOrderGateway()
+	mockStatusGateway := NewMockOrderStatusGateway()
+	uc := NewUpdateOrderUseCase(mockOrderGateway, mockStatusGateway)
 
 	dto := dtos.UpdateOrderDTO{
 		ID:       "invalid-id",
@@ -141,9 +140,9 @@ func TestUpdateOrderUseCase_Execute_InvalidID(t *testing.T) {
 }
 
 func TestUpdateOrderUseCase_Execute_EmptyID(t *testing.T) {
-	orderGateway := gateways.OrderGateway{}
-	statusGateway := gateways.OrderStatusGateway{}
-	uc := NewUpdateOrderUseCase(orderGateway, statusGateway)
+	mockOrderGateway := NewMockOrderGateway()
+	mockStatusGateway := NewMockOrderStatusGateway()
+	uc := NewUpdateOrderUseCase(mockOrderGateway, mockStatusGateway)
 
 	dto := dtos.UpdateOrderDTO{
 		ID:       "",
@@ -165,9 +164,9 @@ func TestUpdateOrderUseCase_Execute_ValidIDFormat(t *testing.T) {
 }
 
 func TestUpdateOrderUseCase_Execute_ReturnsEmptyOrderOnError(t *testing.T) {
-	orderGateway := gateways.OrderGateway{}
-	statusGateway := gateways.OrderStatusGateway{}
-	uc := NewUpdateOrderUseCase(orderGateway, statusGateway)
+	mockOrderGateway := NewMockOrderGateway()
+	mockStatusGateway := NewMockOrderStatusGateway()
+	uc := NewUpdateOrderUseCase(mockOrderGateway, mockStatusGateway)
 
 	dto := dtos.UpdateOrderDTO{
 		ID:       "invalid-id",
@@ -201,19 +200,123 @@ func TestUpdateOrderDTO_Structure(t *testing.T) {
 
 // Comprehensive tests using mocks for full coverage
 
-func TestUpdateOrderUseCase_Execute_ValidInput(t *testing.T) {
-	// Test basic DTO validation
+func TestUpdateOrderUseCase_Execute_Success(t *testing.T) {
+	mockOrderGateway := NewMockOrderGateway()
+	mockStatusGateway := NewMockOrderStatusGateway()
+	uc := NewUpdateOrderUseCase(mockOrderGateway, mockStatusGateway)
+
+	// Create and add test order and status
+	validID := "550e8400-e29b-41d4-a716-446655440000"
+	customerID := "customer-123"
+	oldStatus, _ := entities.NewOrderStatus("pending", "Pending")
+	newStatus, _ := entities.NewOrderStatus("paid", "Paid")
+	
+	order, _ := entities.NewOrderWithItems(validID, &customerID, 25.0, *oldStatus, []entities.OrderItem{}, time.Now(), nil)
+	mockOrderGateway.AddOrder(order)
+	mockStatusGateway.AddStatus(newStatus)
+
+	dto := dtos.UpdateOrderDTO{
+		ID:       validID,
+		StatusID: "paid",
+	}
+
+	updatedOrder, err := uc.Execute(dto)
+	if err != nil {
+		t.Errorf("Expected no error for successful update, got %v", err)
+	}
+
+	if updatedOrder.Status.ID != "paid" {
+		t.Errorf("Expected status ID 'paid', got %s", updatedOrder.Status.ID)
+	}
+
+	if updatedOrder.UpdatedAt == nil {
+		t.Error("Expected UpdatedAt to be set")
+	}
+}
+
+func TestUpdateOrderUseCase_Execute_OrderNotFound(t *testing.T) {
+	mockOrderGateway := NewMockOrderGateway()
+	mockStatusGateway := NewMockOrderStatusGateway()
+	uc := NewUpdateOrderUseCase(mockOrderGateway, mockStatusGateway)
+
 	dto := dtos.UpdateOrderDTO{
 		ID:       "550e8400-e29b-41d4-a716-446655440000",
 		StatusID: "paid",
 	}
 
-	if dto.ID != "550e8400-e29b-41d4-a716-446655440000" {
-		t.Errorf("Expected ID '550e8400-e29b-41d4-a716-446655440000', got '%s'", dto.ID)
+	order, err := uc.Execute(dto)
+	if err == nil {
+		t.Error("Expected error when order not found")
 	}
 
-	if dto.StatusID != "paid" {
-		t.Errorf("Expected StatusID 'paid', got '%s'", dto.StatusID)
+	if _, ok := err.(*exceptions.OrderNotFoundException); !ok {
+		t.Errorf("Expected OrderNotFoundException, got %T", err)
+	}
+
+	if !order.IsEmpty() {
+		t.Error("Expected empty order when not found")
+	}
+}
+
+func TestUpdateOrderUseCase_Execute_StatusNotFound(t *testing.T) {
+	mockOrderGateway := NewMockOrderGateway()
+	mockStatusGateway := NewMockOrderStatusGateway()
+	uc := NewUpdateOrderUseCase(mockOrderGateway, mockStatusGateway)
+
+	// Add order but not status
+	validID := "550e8400-e29b-41d4-a716-446655440000"
+	customerID := "customer-123"
+	status, _ := entities.NewOrderStatus("pending", "Pending")
+	order, _ := entities.NewOrderWithItems(validID, &customerID, 25.0, *status, []entities.OrderItem{}, time.Now(), nil)
+	mockOrderGateway.AddOrder(order)
+
+	dto := dtos.UpdateOrderDTO{
+		ID:       validID,
+		StatusID: "non-existent-status",
+	}
+
+	updatedOrder, err := uc.Execute(dto)
+	if err == nil {
+		t.Error("Expected error when status not found")
+	}
+
+	if _, ok := err.(*exceptions.OrderStatusNotFoundException); !ok {
+		t.Errorf("Expected OrderStatusNotFoundException, got %T", err)
+	}
+
+	if !updatedOrder.IsEmpty() {
+		t.Error("Expected empty order when status not found")
+	}
+}
+
+func TestUpdateOrderUseCase_Execute_UpdateError(t *testing.T) {
+	mockOrderGateway := NewMockOrderGateway()
+	mockStatusGateway := NewMockOrderStatusGateway()
+	uc := NewUpdateOrderUseCase(mockOrderGateway, mockStatusGateway)
+
+	// Add order and status, but make update fail
+	validID := "550e8400-e29b-41d4-a716-446655440000"
+	customerID := "customer-123"
+	oldStatus, _ := entities.NewOrderStatus("pending", "Pending")
+	newStatus, _ := entities.NewOrderStatus("paid", "Paid")
+	
+	order, _ := entities.NewOrderWithItems(validID, &customerID, 25.0, *oldStatus, []entities.OrderItem{}, time.Now(), nil)
+	mockOrderGateway.AddOrder(order)
+	mockStatusGateway.AddStatus(newStatus)
+	mockOrderGateway.SetShouldFailUpdate(true)
+
+	dto := dtos.UpdateOrderDTO{
+		ID:       validID,
+		StatusID: "paid",
+	}
+
+	updatedOrder, err := uc.Execute(dto)
+	if err == nil {
+		t.Error("Expected error when update fails")
+	}
+
+	if !updatedOrder.IsEmpty() {
+		t.Error("Expected empty order when update fails")
 	}
 }
 
