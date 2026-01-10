@@ -3,14 +3,15 @@ package controllers
 import (
 	"context"
 	"errors"
-	"microservice/internal/adapters/brokers"
-	"microservice/internal/adapters/daos"
-	"microservice/internal/adapters/dtos"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+
+	"microservice/internal/adapters/brokers"
+	"microservice/internal/adapters/daos"
+	"microservice/internal/adapters/dtos"
 )
 
 // Mock implementations
@@ -43,13 +44,9 @@ func (m *MockOrderDataSource) Delete(id string) error {
 	return args.Error(0)
 }
 
-type MockOrderStatusDataSource struct {
-	mock.Mock
-}
-
-func (m *MockOrderStatusDataSource) FindByID(id string) (daos.OrderStatusDAO, error) {
-	args := m.Called(id)
-	return args.Get(0).(daos.OrderStatusDAO), args.Error(1)
+type mockOrderStatusDataSource struct {
+	findByIDFunc func(id string) (daos.OrderStatusDAO, error)
+	findAllFunc  func() ([]daos.OrderStatusDAO, error)
 }
 
 func (m *MockOrderStatusDataSource) FindByName(name string) (daos.OrderStatusDAO, error) {
@@ -57,18 +54,26 @@ func (m *MockOrderStatusDataSource) FindByName(name string) (daos.OrderStatusDAO
 	return args.Get(0).(daos.OrderStatusDAO), args.Error(1)
 }
 
+func (m *mockOrderStatusDataSource) FindByName(name string) (daos.OrderStatusDAO, error) {
+	if m.findByNameFunc != nil {
+		return m.findByNameFunc(name)
+	}
+	return daos.OrderStatusDAO{}, nil
+}
+
 func (m *MockOrderStatusDataSource) FindAll() ([]daos.OrderStatusDAO, error) {
 	args := m.Called()
 	return args.Get(0).([]daos.OrderStatusDAO), args.Error(1)
 }
 
-type MockMessageBroker struct {
-	mock.Mock
+type mockMessageBroker struct{}
+
+func (m *mockMessageBroker) SendToKitchen(message map[string]interface{}) error {
+	return nil
 }
 
-func (m *MockMessageBroker) ConsumeOrderUpdates(ctx context.Context, handler brokers.OrderUpdateHandler) error {
-	args := m.Called(ctx, handler)
-	return args.Error(0)
+func (m *mockMessageBroker) ConsumePaymentConfirmations(ctx context.Context, handler brokers.PaymentConfirmationHandler) error {
+	return nil
 }
 
 func (m *MockMessageBroker) Close() error {

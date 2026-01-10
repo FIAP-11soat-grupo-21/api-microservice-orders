@@ -35,6 +35,7 @@ func TestNewRabbitMQBroker_InvalidURL(t *testing.T) {
 		RabbitMQOrdersQueue: "orders-queue",
 	}
 
+	// This may succeed if RabbitMQ is running locally
 	broker, err := NewRabbitMQBroker(config)
 	assert.Error(t, err)
 	assert.Nil(t, broker)
