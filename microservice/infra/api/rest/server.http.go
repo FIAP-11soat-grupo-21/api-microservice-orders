@@ -54,28 +54,34 @@ func Init() {
 		log.Println("The application will continue without message queue support")
 	} else {
 		log.Println("Message broker connected successfully")
-		
+
 		// Inicializar OrderUpdatesConsumer se broker estiver disponível
 		broker := messaging.GetBroker()
 		if broker != nil {
 			ctx := context.Background()
-			
+
 			// Criar datasources e gateways necessários
 			orderDataSource := data_source.NewGormOrderDataSource()
 			orderStatusDataSource := data_source.NewGormOrderStatusDataSource()
 			orderGateway := gateways.NewOrderGateway(orderDataSource)
 			orderStatusGateway := gateways.NewOrderStatusGateway(orderStatusDataSource)
-			
+
 			// Criar consumer para atualizações de pedidos vindas do Kitchen Order
 			orderUpdatesConsumer := consumers.NewOrderUpdatesConsumer(broker, orderGateway, orderStatusGateway)
-			
+
 			go func() {
 				if err := orderUpdatesConsumer.Start(ctx); err != nil {
 					log.Printf("Failed to start order updates consumer: %v", err)
 				}
 			}()
-			
-			log.Println("Order updates consumer started successfully")
+
+			orderErrorConsumer := consumers.NewOrderErrorConsumer(broker, orderGateway)
+
+			go func() {
+				if err := orderErrorConsumer.Start(ctx); err != nil {
+					log.Printf("Failed to start order error consumer: %v", err)
+				}
+			}()
 		}
 	}
 

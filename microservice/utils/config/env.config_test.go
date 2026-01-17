@@ -47,10 +47,10 @@ func TestConfig_Load_Success(t *testing.T) {
 
 func TestConfig_Environment(t *testing.T) {
 	tests := []struct {
-		name     string
-		env      string
-		isProd   bool
-		isDev    bool
+		name   string
+		env    string
+		isProd bool
+		isDev  bool
 	}{
 		{"production", "production", true, false},
 		{"development", "development", false, true},
@@ -143,9 +143,9 @@ func TestConfig_MessageBroker_SQS(t *testing.T) {
 	defer cleanupTestEnv()
 
 	sqsEnvVars := map[string]string{
-		"MESSAGE_BROKER_TYPE":   "sqs",
-		"SQS_ORDERS_QUEUE_URL":  "https://sqs.us-east-1.amazonaws.com/123456789012/orders-queue",
-		"AWS_REGION":            "us-east-1",
+		"MESSAGE_BROKER_TYPE":  "sqs",
+		"SQS_ORDERS_QUEUE_URL": "https://sqs.us-east-1.amazonaws.com/123456789012/orders-queue",
+		"AWS_REGION":           "us-east-1",
 	}
 
 	for key, value := range sqsEnvVars {
@@ -159,12 +159,12 @@ func TestConfig_MessageBroker_SQS(t *testing.T) {
 		t.Errorf("Expected MessageBroker.Type 'sqs', got %s", config.MessageBroker.Type)
 	}
 
-	if config.MessageBroker.SQS.OrdersQueueURL != "https://sqs.us-east-1.amazonaws.com/123456789012/orders-queue" {
-		t.Errorf("Expected SQS OrdersQueueURL 'https://sqs.us-east-1.amazonaws.com/123456789012/orders-queue', got %s", config.MessageBroker.SQS.OrdersQueueURL)
+	if config.MessageBroker.SQS.UpdateOrderStatusQueueURL != "https://sqs.us-east-1.amazonaws.com/123456789012/orders-queue" {
+		t.Errorf("Expected SQS OrdersQueueURL 'https://sqs.us-east-1.amazonaws.com/123456789012/orders-queue', got %s", config.MessageBroker.SQS.UpdateOrderStatusQueueURL)
 	}
 
-	if config.MessageBroker.SQS.AWSRegion != "us-east-1" {
-		t.Errorf("Expected AWS Region 'us-east-1', got %s", config.MessageBroker.SQS.AWSRegion)
+	if config.AWS.Region != "us-east-1" {
+		t.Errorf("Expected AWS Region 'us-east-1', got %s", config.AWS.Region)
 	}
 }
 
@@ -173,9 +173,9 @@ func TestConfig_MessageBroker_RabbitMQ(t *testing.T) {
 	defer cleanupTestEnv()
 
 	rabbitMQEnvVars := map[string]string{
-		"MESSAGE_BROKER_TYPE":    "rabbitmq",
-		"RABBITMQ_URL":           "amqp://user:pass@rabbitmq.example.com:5672/",
-		"RABBITMQ_ORDERS_QUEUE":  "orders.updates",
+		"MESSAGE_BROKER_TYPE":   "rabbitmq",
+		"RABBITMQ_URL":          "amqp://user:pass@rabbitmq.example.com:5672/",
+		"RABBITMQ_ORDERS_QUEUE": "orders.updates",
 	}
 
 	for key, value := range rabbitMQEnvVars {
@@ -221,8 +221,8 @@ func TestConfig_MessageBroker_Defaults(t *testing.T) {
 		t.Errorf("Expected default MessageBroker.Type 'sqs', got %s", config.MessageBroker.Type)
 	}
 
-	if config.MessageBroker.SQS.AWSRegion != "us-east-2" {
-		t.Errorf("Expected default AWS Region 'us-east-2', got %s", config.MessageBroker.SQS.AWSRegion)
+	if config.AWS.Region != "us-east-2" {
+		t.Errorf("Expected default AWS Region 'us-east-2', got %s", config.AWS.Region)
 	}
 
 	if config.MessageBroker.RabbitMQ.URL != "amqp://guest:guest@localhost:5672/" {
@@ -354,8 +354,8 @@ func TestConfig_Structure(t *testing.T) {
 		t.Error("Config.MessageBroker.Type field missing")
 	}
 
-	if config.MessageBroker.SQS.OrdersQueueURL == "" && config.MessageBroker.SQS.OrdersQueueURL != "" {
-		t.Error("Config.MessageBroker.SQS.OrdersQueueURL field missing")
+	if config.MessageBroker.SQS.UpdateOrderStatusQueueURL == "" && config.MessageBroker.SQS.UpdateOrderStatusQueueURL != "" {
+		t.Error("Config.MessageBroker.SQS.UpdateOrderStatusQueueURL field missing")
 	}
 
 	if config.MessageBroker.RabbitMQ.URL == "" && config.MessageBroker.RabbitMQ.URL != "" {

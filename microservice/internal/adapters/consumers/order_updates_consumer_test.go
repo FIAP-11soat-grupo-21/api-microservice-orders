@@ -15,11 +15,27 @@ import (
 // Mock implementations for testing
 type mockBroker struct {
 	consumeOrderUpdatesFunc func(ctx context.Context, handler brokers.OrderUpdateHandler) error
+	consumeOrderErrorFunc   func(ctx context.Context, handler brokers.OrderErrorHandler) error
+	publishOnTopicFunc      func(ctx context.Context, topic string, message interface{}) error
 }
 
 func (m *mockBroker) ConsumeOrderUpdates(ctx context.Context, handler brokers.OrderUpdateHandler) error {
 	if m.consumeOrderUpdatesFunc != nil {
 		return m.consumeOrderUpdatesFunc(ctx, handler)
+	}
+	return nil
+}
+
+func (m *mockBroker) ConsumeOrderError(ctx context.Context, handler brokers.OrderErrorHandler) error {
+	if m.consumeOrderErrorFunc != nil {
+		return m.consumeOrderErrorFunc(ctx, handler)
+	}
+	return nil
+}
+
+func (m *mockBroker) PublishOnTopic(ctx context.Context, topic string, message interface{}) error {
+	if m.publishOnTopicFunc != nil {
+		return m.publishOnTopicFunc(ctx, topic, message)
 	}
 	return nil
 }
@@ -82,9 +98,9 @@ func TestNewOrderUpdatesConsumer(t *testing.T) {
 	broker := &mockBroker{}
 	orderGateway := &mockOrderGateway{}
 	statusGateway := &mockOrderStatusGateway{}
-	
+
 	consumer := NewOrderUpdatesConsumer(broker, orderGateway, statusGateway)
-	
+
 	assert.NotNil(t, consumer)
 	assert.Equal(t, broker, consumer.broker)
 	assert.NotNil(t, consumer.updateOrderStatusUseCase)
@@ -99,12 +115,12 @@ func TestOrderUpdatesConsumer_Start_Success(t *testing.T) {
 	}
 	orderGateway := &mockOrderGateway{}
 	statusGateway := &mockOrderStatusGateway{}
-	
+
 	consumer := NewOrderUpdatesConsumer(broker, orderGateway, statusGateway)
-	
+
 	ctx := context.Background()
 	err := consumer.Start(ctx)
-	
+
 	assert.NoError(t, err)
 }
 
@@ -116,12 +132,12 @@ func TestOrderUpdatesConsumer_Start_BrokerError(t *testing.T) {
 	}
 	orderGateway := &mockOrderGateway{}
 	statusGateway := &mockOrderStatusGateway{}
-	
+
 	consumer := NewOrderUpdatesConsumer(broker, orderGateway, statusGateway)
-	
+
 	ctx := context.Background()
 	err := consumer.Start(ctx)
-	
+
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "broker connection failed")
 }
@@ -161,19 +177,19 @@ func TestOrderUpdatesConsumer_processOrderUpdate_Success(t *testing.T) {
 			return nil
 		},
 	}
-	
+
 	consumer := NewOrderUpdatesConsumer(broker, orderGateway, statusGateway)
-	
+
 	ctx := context.Background()
 	err := consumer.Start(ctx)
 	assert.NoError(t, err)
-	
+
 	// Test the captured handler
 	message := brokers.OrderUpdateMessage{
 		OrderID: "order-123",
 		Status:  "Em preparação",
 	}
-	
+
 	err = capturedHandler(message)
 	assert.NoError(t, err)
 }
@@ -194,19 +210,19 @@ func TestOrderUpdatesConsumer_processOrderUpdate_OrderNotFound(t *testing.T) {
 			return nil
 		},
 	}
-	
+
 	consumer := NewOrderUpdatesConsumer(broker, orderGateway, statusGateway)
-	
+
 	ctx := context.Background()
 	err := consumer.Start(ctx)
 	assert.NoError(t, err)
-	
+
 	// Test the captured handler with non-existent order
 	message := brokers.OrderUpdateMessage{
 		OrderID: "non-existent-order",
 		Status:  "Em preparação",
 	}
-	
+
 	err = capturedHandler(message)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to find order")
@@ -237,19 +253,19 @@ func TestOrderUpdatesConsumer_processOrderUpdate_StatusNotFound(t *testing.T) {
 			return nil
 		},
 	}
-	
+
 	consumer := NewOrderUpdatesConsumer(broker, orderGateway, statusGateway)
-	
+
 	ctx := context.Background()
 	err := consumer.Start(ctx)
 	assert.NoError(t, err)
-	
+
 	// Test the captured handler with invalid status
 	message := brokers.OrderUpdateMessage{
 		OrderID: "order-123",
 		Status:  "Status Inexistente",
 	}
-	
+
 	err = capturedHandler(message)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to find order status")
@@ -284,19 +300,19 @@ func TestOrderUpdatesConsumer_processOrderUpdate_UpdateError(t *testing.T) {
 			return nil
 		},
 	}
-	
+
 	consumer := NewOrderUpdatesConsumer(broker, orderGateway, statusGateway)
-	
+
 	ctx := context.Background()
 	err := consumer.Start(ctx)
 	assert.NoError(t, err)
-	
+
 	// Test the captured handler with update error
 	message := brokers.OrderUpdateMessage{
 		OrderID: "order-123",
 		Status:  "Em preparação",
 	}
-	
+
 	err = capturedHandler(message)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to update order")

@@ -102,6 +102,14 @@ func (m *testMessageBroker) ConsumeOrderUpdates(ctx context.Context, handler bro
 	return nil
 }
 
+func (m *testMessageBroker) ConsumeOrderError(ctx context.Context, handler brokers.OrderErrorHandler) error {
+	return nil
+}
+
+func (m *testMessageBroker) PublishOnTopic(ctx context.Context, topic string, message interface{}) error {
+	return nil
+}
+
 func (m *testMessageBroker) Close() error {
 	return nil
 }

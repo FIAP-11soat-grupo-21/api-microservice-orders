@@ -14,9 +14,9 @@ func TestNewFactory(t *testing.T) {
 func TestFactory_CreateBroker_SQS(t *testing.T) {
 	factory := NewFactory()
 	config := BrokerConfig{
-		Type:              "sqs",
-		SQSOrdersQueueURL: "https://sqs.us-east-1.amazonaws.com/123456789012/orders-queue",
-		AWSRegion:         "us-east-1",
+		Type:                         "sqs",
+		SQSUpdateOrderStatusQueueURL: "https://sqs.us-east-1.amazonaws.com/123456789012/orders-queue",
+		AWSRegion:                    "us-east-1",
 	}
 
 	broker, err := factory.CreateBroker(config)
@@ -66,9 +66,9 @@ func TestFactory_CreateBroker_CaseInsensitive(t *testing.T) {
 
 	for _, brokerType := range testCases {
 		config := BrokerConfig{
-			Type:              brokerType,
-			SQSOrdersQueueURL: "https://sqs.us-east-1.amazonaws.com/123456789012/orders-queue",
-			AWSRegion:         "us-east-1",
+			Type:                         brokerType,
+			SQSUpdateOrderStatusQueueURL: "https://sqs.us-east-1.amazonaws.com/123456789012/orders-queue",
+			AWSRegion:                    "us-east-1",
 		}
 
 		broker, err := factory.CreateBroker(config)

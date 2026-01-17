@@ -1,6 +1,7 @@
 package use_cases
 
 import (
+	"context"
 	"time"
 
 	"microservice/internal/adapters/brokers"
@@ -8,6 +9,7 @@ import (
 	"microservice/internal/domain/entities"
 	"microservice/internal/domain/exceptions"
 	"microservice/internal/interfaces"
+	"microservice/utils/config"
 	identityUtils "microservice/utils/identity"
 )
 
@@ -57,6 +59,18 @@ func (uc *CreateOrderUseCase) Execute(customerID *string, items []dtos.CreateOrd
 	}
 
 	err = uc.orderGateway.Create(*order)
+	if err != nil {
+		return entities.Order{}, err
+	}
+
+	cfg := config.LoadConfig()
+
+	ctx := context.Background()
+	orderCreatedTopic := cfg.MessageBroker.SNS.OrderCreatedTopicARN
+	message := order.ToMap()
+
+	err = uc.messageBroker.PublishOnTopic(ctx, orderCreatedTopic, message)
+
 	if err != nil {
 		return entities.Order{}, err
 	}

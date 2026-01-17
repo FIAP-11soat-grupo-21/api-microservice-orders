@@ -18,3 +18,10 @@ func NewOrderStatus(id string, name string) (*OrderStatus, error) {
 		Name: nameValueObject,
 	}, nil
 }
+
+func (os *OrderStatus) ToMap() map[string]interface{} {
+	return map[string]interface{}{
+		"id":   os.ID,
+		"name": os.Name.Value(),
+	}
+}

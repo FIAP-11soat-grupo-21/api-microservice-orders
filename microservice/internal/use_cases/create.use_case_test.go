@@ -146,6 +146,14 @@ func (m *MockMessageBroker) ConsumeOrderUpdates(ctx context.Context, handler bro
 	return nil
 }
 
+func (m *MockMessageBroker) ConsumeOrderError(ctx context.Context, handler brokers.OrderErrorHandler) error {
+	return nil
+}
+
+func (m *MockMessageBroker) PublishOnTopic(ctx context.Context, topic string, message interface{}) error {
+	return nil
+}
+
 func (m *MockMessageBroker) Close() error {
 	return nil
 }

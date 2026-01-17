@@ -144,6 +144,16 @@ func (r *RabbitMQBroker) shouldDiscardMessage(err error) bool {
 	return false
 }
 
+func (r *RabbitMQBroker) ConsumeOrderError(ctx context.Context, handler OrderErrorHandler) error {
+	// not implemented yet
+	return nil
+}
+
+func (r *RabbitMQBroker) PublishOnTopic(ctx context.Context, topic string, message interface{}) error {
+	// not implemented yet
+	return nil
+}
+
 func (r *RabbitMQBroker) Close() error {
 	if r.channel != nil {
 		r.channel.Close()

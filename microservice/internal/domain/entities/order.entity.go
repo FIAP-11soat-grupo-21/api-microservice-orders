@@ -71,3 +71,20 @@ func ValidateID(id string) error {
 	}
 	return nil
 }
+
+func (o *Order) ToMap() map[string]interface{} {
+	items := make([]map[string]interface{}, len(o.Items))
+	for i, item := range o.Items {
+		items[i] = item.ToMap()
+	}
+
+	return map[string]interface{}{
+		"id":          o.ID,
+		"customer_id": o.CustomerID,
+		"amount":      o.Amount.Value(),
+		"status":      o.Status.ToMap(),
+		"items":       items,
+		"created_at":  o.CreatedAt,
+		"updated_at":  o.UpdatedAt,
+	}
+}

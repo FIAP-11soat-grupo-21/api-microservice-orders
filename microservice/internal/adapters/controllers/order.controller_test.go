@@ -71,6 +71,16 @@ func (m *MockMessageBroker) ConsumeOrderUpdates(ctx context.Context, handler bro
 	return args.Error(0)
 }
 
+func (m *MockMessageBroker) ConsumeOrderError(ctx context.Context, handler brokers.OrderErrorHandler) error {
+	args := m.Called(ctx, handler)
+	return args.Error(0)
+}
+
+func (m *MockMessageBroker) PublishOnTopic(ctx context.Context, topic string, message interface{}) error {
+	args := m.Called(ctx, topic, message)
+	return args.Error(0)
+}
+
 func (m *MockMessageBroker) Close() error {
 	args := m.Called()
 	return args.Error(0)
