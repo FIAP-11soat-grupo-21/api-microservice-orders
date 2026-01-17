@@ -1,6 +1,24 @@
 version: '3.8'
 
 services:
+  app:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - ../microservice/.env
+    volumes:
+      - ../..:/workspaces:cached
+    command: sleep infinity
+    ports:
+      - "8082:8082"
+    networks:
+      - backbone
+    depends_on: 
+      - postgres
+      - rabbitmq
+      - localstack
+
   postgres:
     image: postgres:15-alpine
     container_name: orders-postgres
@@ -12,6 +30,8 @@ services:
       - "5434:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - backbone
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
@@ -29,11 +49,37 @@ services:
       - "15672:15672"
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - backbone
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "check_running"]
       interval: 10s
       timeout: 5s
       retries: 5
+
+  localstack: 
+    image: localstack/localstack:3.0
+    ports:
+      - "4566:4566"
+      - "4510-4559:4510-4559"
+    environment:
+      - SERVICES=sns,sqs
+      - AWS_DEFAULT_REGION=us-east-2
+    volumes:
+      - ../.docker/localstack/bootstrap.sh:/etc/localstack/init/ready.d/01-bootstrap.sh
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - backbone
+    healthcheck:
+      test: ["CMD", "awslocal", "sqs", "list-queues"]
+      interval: 5s
+      timeout: 10s
+      retries: 10
+      start_period: 10s
+
+networks:
+  backbone:
+    driver: bridge
 
 volumes:
   postgres_data:

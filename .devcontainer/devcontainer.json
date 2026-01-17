@@ -2,7 +2,10 @@
   "name": "Orders Microservice",
   "dockerComposeFile": "docker-compose.yml",
   "service": "app",
-  "workspaceFolder": "/workspace",
+  "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+  "postCreateCommand": "cd microservice && go mod download",
+  "remoteUser": "root",
+  "forwardPorts": [8082],
   "customizations": {
     "vscode": {
       "extensions": [
