@@ -143,9 +143,9 @@ func TestConfig_MessageBroker_SQS(t *testing.T) {
 	defer cleanupTestEnv()
 
 	sqsEnvVars := map[string]string{
-		"MESSAGE_BROKER_TYPE":  "sqs",
-		"SQS_ORDERS_QUEUE_URL": "https://sqs.us-east-1.amazonaws.com/123456789012/orders-queue",
-		"AWS_REGION":           "us-east-1",
+		"MESSAGE_BROKER_TYPE":               "sqs",
+		"SQS_UPDATE_ORDER_STATUS_QUEUE_URL": "http://localhost:4566/000000000000/update-order-status-queue",
+		"AWS_REGION":                        "us-east-1",
 	}
 
 	for key, value := range sqsEnvVars {
@@ -159,42 +159,12 @@ func TestConfig_MessageBroker_SQS(t *testing.T) {
 		t.Errorf("Expected MessageBroker.Type 'sqs', got %s", config.MessageBroker.Type)
 	}
 
-	if config.MessageBroker.SQS.UpdateOrderStatusQueueURL != "https://sqs.us-east-1.amazonaws.com/123456789012/orders-queue" {
-		t.Errorf("Expected SQS OrdersQueueURL 'https://sqs.us-east-1.amazonaws.com/123456789012/orders-queue', got %s", config.MessageBroker.SQS.UpdateOrderStatusQueueURL)
+	if config.MessageBroker.SQS.UpdateOrderStatusQueueURL != "http://localhost:4566/000000000000/update-order-status-queue" {
+		t.Errorf("Expected SQS UpdateOrderStatusQueueURL 'http://localhost:4566/000000000000/update-order-status-queue', got %s", config.MessageBroker.SQS.UpdateOrderStatusQueueURL)
 	}
 
 	if config.AWS.Region != "us-east-1" {
 		t.Errorf("Expected AWS Region 'us-east-1', got %s", config.AWS.Region)
-	}
-}
-
-func TestConfig_MessageBroker_RabbitMQ(t *testing.T) {
-	setupTestEnv()
-	defer cleanupTestEnv()
-
-	rabbitMQEnvVars := map[string]string{
-		"MESSAGE_BROKER_TYPE":   "rabbitmq",
-		"RABBITMQ_URL":          "amqp://user:pass@rabbitmq.example.com:5672/",
-		"RABBITMQ_ORDERS_QUEUE": "orders.updates",
-	}
-
-	for key, value := range rabbitMQEnvVars {
-		os.Setenv(key, value)
-	}
-
-	config := &Config{}
-	config.Load()
-
-	if config.MessageBroker.Type != "rabbitmq" {
-		t.Errorf("Expected MessageBroker.Type 'rabbitmq', got %s", config.MessageBroker.Type)
-	}
-
-	if config.MessageBroker.RabbitMQ.URL != "amqp://user:pass@rabbitmq.example.com:5672/" {
-		t.Errorf("Expected RabbitMQ URL 'amqp://user:pass@rabbitmq.example.com:5672/', got %s", config.MessageBroker.RabbitMQ.URL)
-	}
-
-	if config.MessageBroker.RabbitMQ.OrdersQueue != "orders.updates" {
-		t.Errorf("Expected RabbitMQ OrdersQueue 'orders.updates', got %s", config.MessageBroker.RabbitMQ.OrdersQueue)
 	}
 }
 
@@ -204,15 +174,11 @@ func TestConfig_MessageBroker_Defaults(t *testing.T) {
 
 	// Remove MESSAGE_BROKER_TYPE to test default
 	os.Unsetenv("MESSAGE_BROKER_TYPE")
-	os.Unsetenv("SQS_ORDERS_QUEUE_URL")
-	os.Unsetenv("RABBITMQ_URL")
-	os.Unsetenv("RABBITMQ_ORDERS_QUEUE")
+	os.Unsetenv("AWS_REGION")
 
 	// Set defaults
 	os.Setenv("MESSAGE_BROKER_TYPE", "sqs")
 	os.Setenv("AWS_REGION", "us-east-2")
-	os.Setenv("RABBITMQ_URL", "amqp://guest:guest@localhost:5672/")
-	os.Setenv("RABBITMQ_ORDERS_QUEUE", "orders.updates")
 
 	config := &Config{}
 	config.Load()
@@ -223,14 +189,6 @@ func TestConfig_MessageBroker_Defaults(t *testing.T) {
 
 	if config.AWS.Region != "us-east-2" {
 		t.Errorf("Expected default AWS Region 'us-east-2', got %s", config.AWS.Region)
-	}
-
-	if config.MessageBroker.RabbitMQ.URL != "amqp://guest:guest@localhost:5672/" {
-		t.Errorf("Expected default RabbitMQ URL 'amqp://guest:guest@localhost:5672/', got %s", config.MessageBroker.RabbitMQ.URL)
-	}
-
-	if config.MessageBroker.RabbitMQ.OrdersQueue != "orders.updates" {
-		t.Errorf("Expected default RabbitMQ OrdersQueue 'orders.updates', got %s", config.MessageBroker.RabbitMQ.OrdersQueue)
 	}
 }
 
@@ -264,20 +222,24 @@ func TestConfig_AllFields(t *testing.T) {
 	defer cleanupTestEnv()
 
 	allEnvVars := map[string]string{
-		"GO_ENV":                "production",
-		"API_PORT":              "8443",
-		"API_HOST":              "api.example.com",
-		"DB_RUN_MIGRATIONS":     "true",
-		"DB_HOST":               "prod-db.example.com",
-		"DB_NAME":               "orders_prod",
-		"DB_PORT":               "5432",
-		"DB_USERNAME":           "prod_user",
-		"DB_PASSWORD":           "prod_password",
-		"MESSAGE_BROKER_TYPE":   "rabbitmq",
-		"SQS_ORDERS_QUEUE_URL":  "https://sqs.us-west-2.amazonaws.com/123456789012/orders",
-		"AWS_REGION":            "us-west-2",
-		"RABBITMQ_URL":          "amqp://prod:prod@rabbitmq-prod:5672/",
-		"RABBITMQ_ORDERS_QUEUE": "orders.prod",
+		"GO_ENV":                            "production",
+		"API_PORT":                          "8443",
+		"API_HOST":                          "api.example.com",
+		"DB_RUN_MIGRATIONS":                 "true",
+		"DB_HOST":                           "prod-db.example.com",
+		"DB_NAME":                           "orders_prod",
+		"DB_PORT":                           "5432",
+		"DB_USERNAME":                       "prod_user",
+		"DB_PASSWORD":                       "prod_password",
+		"MESSAGE_BROKER_TYPE":               "sqs",
+		"AWS_REGION":                        "us-west-2",
+		"AWS_ACCESS_KEY_ID":                 "test",
+		"AWS_SECRET_ACCESS_KEY":             "test",
+		"AWS_ENDPOINT":                      "http://localhost:4566",
+		"SQS_UPDATE_ORDER_STATUS_QUEUE_URL": "http://localhost:4566/000000000000/update-order-status-queue",
+		"SQS_ORDER_ERROR_QUEUE_URL":         "http://localhost:4566/000000000000/order-error-queue",
+		"SNS_ORDER_ERROR_TOPIC_ARN":         "arn:aws:sns:us-west-2:000000000000:order-error-topic",
+		"SNS_ORDER_CREATED_TOPIC_ARN":       "arn:aws:sns:us-west-2:000000000000:order-created-topic",
 	}
 
 	for key, value := range allEnvVars {
@@ -312,12 +274,40 @@ func TestConfig_AllFields(t *testing.T) {
 		t.Errorf("Expected Database.Name 'orders_prod', got %s", config.Database.Name)
 	}
 
-	if config.MessageBroker.Type != "rabbitmq" {
-		t.Errorf("Expected MessageBroker.Type 'rabbitmq', got %s", config.MessageBroker.Type)
+	if config.MessageBroker.Type != "sqs" {
+		t.Errorf("Expected MessageBroker.Type 'sqs', got %s", config.MessageBroker.Type)
 	}
 
-	if config.MessageBroker.RabbitMQ.URL != "amqp://prod:prod@rabbitmq-prod:5672/" {
-		t.Errorf("Expected RabbitMQ URL 'amqp://prod:prod@rabbitmq-prod:5672/', got %s", config.MessageBroker.RabbitMQ.URL)
+	if config.AWS.Region != "us-west-2" {
+		t.Errorf("Expected AWS Region 'us-west-2', got %s", config.AWS.Region)
+	}
+
+	if config.AWS.AccessKeyID != "test" {
+		t.Errorf("Expected AWS AccessKeyID 'test', got %s", config.AWS.AccessKeyID)
+	}
+
+	if config.AWS.SecretAccessKey != "test" {
+		t.Errorf("Expected AWS SecretAccessKey 'test', got %s", config.AWS.SecretAccessKey)
+	}
+
+	if config.AWS.Endpoint != "http://localhost:4566" {
+		t.Errorf("Expected AWS Endpoint 'http://localhost:4566', got %s", config.AWS.Endpoint)
+	}
+
+	if config.MessageBroker.SQS.UpdateOrderStatusQueueURL != "http://localhost:4566/000000000000/update-order-status-queue" {
+		t.Errorf("Expected SQS UpdateOrderStatusQueueURL 'http://localhost:4566/000000000000/update-order-status-queue', got %s", config.MessageBroker.SQS.UpdateOrderStatusQueueURL)
+	}
+
+	if config.MessageBroker.SQS.OrderErrorQueueURL != "http://localhost:4566/000000000000/order-error-queue" {
+		t.Errorf("Expected SQS OrderErrorQueueURL 'http://localhost:4566/000000000000/order-error-queue', got %s", config.MessageBroker.SQS.OrderErrorQueueURL)
+	}
+
+	if config.MessageBroker.SNS.OrderErrorTopicARN != "arn:aws:sns:us-west-2:000000000000:order-error-topic" {
+		t.Errorf("Expected SNS OrderErrorTopicARN 'arn:aws:sns:us-west-2:000000000000:order-error-topic', got %s", config.MessageBroker.SNS.OrderErrorTopicARN)
+	}
+
+	if config.MessageBroker.SNS.OrderCreatedTopicARN != "arn:aws:sns:us-west-2:000000000000:order-created-topic" {
+		t.Errorf("Expected SNS OrderCreatedTopicARN 'arn:aws:sns:us-west-2:000000000000:order-created-topic', got %s", config.MessageBroker.SNS.OrderCreatedTopicARN)
 	}
 
 	if config.IsProduction() != true {
@@ -357,29 +347,29 @@ func TestConfig_Structure(t *testing.T) {
 	if config.MessageBroker.SQS.UpdateOrderStatusQueueURL == "" && config.MessageBroker.SQS.UpdateOrderStatusQueueURL != "" {
 		t.Error("Config.MessageBroker.SQS.UpdateOrderStatusQueueURL field missing")
 	}
-
-	if config.MessageBroker.RabbitMQ.URL == "" && config.MessageBroker.RabbitMQ.URL != "" {
-		t.Error("Config.MessageBroker.RabbitMQ.URL field missing")
-	}
 }
 
 // Helper functions
 func setupTestEnv() {
 	defaultEnvVars := map[string]string{
-		"GO_ENV":                "test",
-		"API_PORT":              "8080",
-		"API_HOST":              "localhost",
-		"DB_RUN_MIGRATIONS":     "false",
-		"DB_HOST":               "localhost",
-		"DB_NAME":               "test_db",
-		"DB_PORT":               "5432",
-		"DB_USERNAME":           "test_user",
-		"DB_PASSWORD":           "test_pass",
-		"MESSAGE_BROKER_TYPE":   "sqs",
-		"SQS_ORDERS_QUEUE_URL":  "https://sqs.us-east-1.amazonaws.com/123456789012/test-orders",
-		"AWS_REGION":            "us-east-1",
-		"RABBITMQ_URL":          "amqp://guest:guest@localhost:5672/",
-		"RABBITMQ_ORDERS_QUEUE": "orders.updates",
+		"GO_ENV":                            "test",
+		"API_PORT":                          "8080",
+		"API_HOST":                          "localhost",
+		"DB_RUN_MIGRATIONS":                 "false",
+		"DB_HOST":                           "localhost",
+		"DB_NAME":                           "test_db",
+		"DB_PORT":                           "5432",
+		"DB_USERNAME":                       "test_user",
+		"DB_PASSWORD":                       "test_pass",
+		"MESSAGE_BROKER_TYPE":               "sqs",
+		"AWS_REGION":                        "us-west-2",
+		"AWS_ACCESS_KEY_ID":                 "test",
+		"AWS_SECRET_ACCESS_KEY":             "test",
+		"AWS_ENDPOINT":                      "http://localhost:4566",
+		"SQS_UPDATE_ORDER_STATUS_QUEUE_URL": "http://localhost:4566/000000000000/update-order-status-queue",
+		"SQS_ORDER_ERROR_QUEUE_URL":         "http://localhost:4566/000000000000/order-error-queue",
+		"SNS_ORDER_ERROR_TOPIC_ARN":         "arn:aws:sns:us-west-2:000000000000:order-error-topic",
+		"SNS_ORDER_CREATED_TOPIC_ARN":       "arn:aws:sns:us-west-2:000000000000:order-created-topic",
 	}
 
 	for key, value := range defaultEnvVars {
@@ -391,8 +381,9 @@ func cleanupTestEnv() {
 	envVars := []string{
 		"GO_ENV", "API_PORT", "API_HOST", "DB_RUN_MIGRATIONS",
 		"DB_HOST", "DB_NAME", "DB_PORT", "DB_USERNAME", "DB_PASSWORD",
-		"MESSAGE_BROKER_TYPE", "SQS_ORDERS_QUEUE_URL", "AWS_REGION",
-		"RABBITMQ_URL", "RABBITMQ_ORDERS_QUEUE",
+		"MESSAGE_BROKER_TYPE", "SQS_UPDATE_ORDER_STATUS_QUEUE_URL", "SQS_ORDER_ERROR_QUEUE_URL", "AWS_REGION",
+		"AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_ENDPOINT",
+		"SNS_ORDER_ERROR_TOPIC_ARN", "SNS_ORDER_CREATED_TOPIC_ARN",
 	}
 
 	for _, envVar := range envVars {

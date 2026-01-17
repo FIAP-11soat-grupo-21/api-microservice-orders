@@ -2,6 +2,8 @@ package factories
 
 import (
 	"microservice/infra/db/postgres/data_source"
+	"microservice/infra/messaging"
+	"microservice/internal/adapters/brokers"
 	"microservice/internal/adapters/gateways"
 	"microservice/internal/interfaces"
 	"microservice/internal/use_cases"
@@ -15,12 +17,20 @@ var newOrderStatusDataSource func() interfaces.IOrderStatusDataSource = func() i
 	return data_source.NewGormOrderStatusDataSource()
 }
 
+var newMessageBroker func() brokers.MessageBroker = func() brokers.MessageBroker {
+	return messaging.GetBroker()
+}
+
 func NewOrderDataSource() interfaces.IOrderDataSource {
 	return newOrderDataSource()
 }
 
 func NewOrderStatusDataSource() interfaces.IOrderStatusDataSource {
 	return newOrderStatusDataSource()
+}
+
+func NewMessageBroker() brokers.MessageBroker {
+	return newMessageBroker()
 }
 
 func NewUpdateOrderStatusUseCase() *use_cases.UpdateOrderStatusUseCase {
@@ -49,4 +59,14 @@ func SetNewOrderStatusDataSource(fn func() interfaces.IOrderStatusDataSource) {
 		return
 	}
 	newOrderStatusDataSource = fn
+}
+
+func SetNewMessageBroker(fn func() brokers.MessageBroker) {
+	if fn == nil {
+		newMessageBroker = func() brokers.MessageBroker {
+			return messaging.GetBroker()
+		}
+		return
+	}
+	newMessageBroker = fn
 }

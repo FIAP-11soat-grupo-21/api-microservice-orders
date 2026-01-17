@@ -127,6 +127,7 @@ func TestOrderController_Create_Success(t *testing.T) {
 	}, nil)
 
 	mockOrderDS.On("Create", mock.AnythingOfType("daos.OrderDAO")).Return(nil)
+	mockBroker.On("PublishOnTopic", mock.Anything, mock.AnythingOfType("string"), mock.Anything).Return(nil)
 
 	result, err := controller.Create(createDTO)
 
@@ -139,6 +140,7 @@ func TestOrderController_Create_Success(t *testing.T) {
 
 	mockOrderDS.AssertExpectations(t)
 	mockOrderStatusDS.AssertExpectations(t)
+	mockBroker.AssertExpectations(t)
 }
 
 func TestOrderController_Create_Error(t *testing.T) {

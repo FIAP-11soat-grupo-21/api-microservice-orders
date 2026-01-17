@@ -45,10 +45,6 @@ type BrokerConfig struct {
 	// SNS
 	SNSOrderErrorTopicARN   string
 	SNSOrderCreatedTopicARN string
-
-	// RabbitMQ
-	RabbitMQURL         string
-	RabbitMQOrdersQueue string
 }
 
 type BrokerFactory interface {

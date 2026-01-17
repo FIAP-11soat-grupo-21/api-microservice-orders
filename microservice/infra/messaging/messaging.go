@@ -30,9 +30,6 @@ func Connect() error {
 		// SNS
 		SNSOrderErrorTopicARN:   cfg.MessageBroker.SNS.OrderErrorTopicARN,
 		SNSOrderCreatedTopicARN: cfg.MessageBroker.SNS.OrderCreatedTopicARN,
-		// RabbitMQ
-		RabbitMQURL:         buildRabbitMQURL(cfg),
-		RabbitMQOrdersQueue: cfg.MessageBroker.RabbitMQ.OrdersQueue,
 	}
 
 	if cfg.MessageBroker.Type == "sqs" {
@@ -55,10 +52,6 @@ func Connect() error {
 
 func GetBroker() brokers.MessageBroker {
 	return broker
-}
-
-func buildRabbitMQURL(cfg *config.Config) string {
-	return cfg.MessageBroker.RabbitMQ.URL
 }
 
 func Close() {

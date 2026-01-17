@@ -30,7 +30,7 @@ type Config struct {
 	}
 
 	MessageBroker struct {
-		Type string // "sqs" ou "rabbitmq"
+		Type string // "sqs"
 
 		// SQS
 		SQS struct {
@@ -41,12 +41,6 @@ type Config struct {
 		SNS struct {
 			OrderErrorTopicARN   string
 			OrderCreatedTopicARN string
-		}
-
-		// RabbitMQ
-		RabbitMQ struct {
-			URL         string // (ex: amqp://user:pass@host:port/)
-			OrdersQueue string
 		}
 	}
 }
@@ -108,10 +102,6 @@ func (c *Config) Load() *Config {
 	// SNS
 	c.MessageBroker.SNS.OrderErrorTopicARN = getEnv("SNS_ORDER_ERROR_TOPIC_ARN", "")
 	c.MessageBroker.SNS.OrderCreatedTopicARN = getEnv("SNS_ORDER_CREATED_TOPIC_ARN", "")
-
-	// RabbitMQ
-	c.MessageBroker.RabbitMQ.URL = getEnv("RABBITMQ_URL", "amqp://guest:guest@localhost:5672/")
-	c.MessageBroker.RabbitMQ.OrdersQueue = getEnv("RABBITMQ_ORDERS_QUEUE", "orders.updates")
 
 	return c
 }

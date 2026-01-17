@@ -3,23 +3,27 @@ package messaging
 import (
 	"os"
 	"testing"
-
-	"microservice/utils/config"
 )
 
 func TestConnect_Simple(t *testing.T) {
-	os.Setenv("GO_ENV", "test")
-	os.Setenv("API_PORT", "8080")
+	os.Setenv("GO_ENV", "development")
 	os.Setenv("API_HOST", "localhost")
-	os.Setenv("DB_RUN_MIGRATIONS", "false")
+	os.Setenv("API_PORT", "3000")
 	os.Setenv("DB_HOST", "localhost")
-	os.Setenv("DB_NAME", "test_db")
 	os.Setenv("DB_PORT", "5432")
+	os.Setenv("DB_NAME", "test_db")
 	os.Setenv("DB_USERNAME", "test_user")
 	os.Setenv("DB_PASSWORD", "test_pass")
+	os.Setenv("DB_RUN_MIGRATIONS", "false")
 	os.Setenv("MESSAGE_BROKER_TYPE", "sqs")
-	os.Setenv("SQS_ORDERS_QUEUE_URL", "https://sqs.us-east-1.amazonaws.com/123456789012/orders")
 	os.Setenv("AWS_REGION", "us-east-1")
+	os.Setenv("AWS_ACCESS_KEY_ID", "test")
+	os.Setenv("AWS_SECRET_ACCESS_KEY", "test")
+	os.Setenv("AWS_ENDPOINT", "http://localhost:4566")
+	os.Setenv("SQS_UPDATE_ORDER_STATUS_QUEUE_URL", "http://localhost:4566/000000000000/update-order-status-queue")
+	os.Setenv("SQS_ORDER_ERROR_QUEUE_URL", "http://localhost:4566/000000000000/order-error-queue")
+	os.Setenv("SNS_ORDER_ERROR_TOPIC_ARN", "arn:aws:sns:us-west-2:000000000000:order-error-topic")
+	os.Setenv("SNS_ORDER_CREATED_TOPIC_ARN", "arn:aws:sns:us-west-2:000000000000:order-created-topic")
 
 	defer func() {
 		os.Unsetenv("GO_ENV")
@@ -32,8 +36,14 @@ func TestConnect_Simple(t *testing.T) {
 		os.Unsetenv("DB_USERNAME")
 		os.Unsetenv("DB_PASSWORD")
 		os.Unsetenv("MESSAGE_BROKER_TYPE")
-		os.Unsetenv("SQS_ORDERS_QUEUE_URL")
 		os.Unsetenv("AWS_REGION")
+		os.Unsetenv("AWS_ACCESS_KEY_ID")
+		os.Unsetenv("AWS_SECRET_ACCESS_KEY")
+		os.Unsetenv("AWS_ENDPOINT")
+		os.Unsetenv("SQS_UPDATE_ORDER_STATUS_QUEUE_URL")
+		os.Unsetenv("SQS_ORDER_ERROR_QUEUE_URL")
+		os.Unsetenv("SNS_ORDER_ERROR_TOPIC_ARN")
+		os.Unsetenv("SNS_ORDER_CREATED_TOPIC_ARN")
 	}()
 
 	err := Connect()
@@ -45,16 +55,6 @@ func TestConnect_Simple(t *testing.T) {
 func TestGetBroker_Simple(t *testing.T) {
 	broker := GetBroker()
 	_ = broker
-}
-
-func TestBuildRabbitMQURL_Simple(t *testing.T) {
-	cfg := &config.Config{}
-	cfg.MessageBroker.RabbitMQ.URL = "amqp://test:test@localhost:5672/"
-
-	url := buildRabbitMQURL(cfg)
-	if url != "amqp://test:test@localhost:5672/" {
-		t.Errorf("Expected URL 'amqp://test:test@localhost:5672/', got '%s'", url)
-	}
 }
 
 func TestClose_Simple(t *testing.T) {

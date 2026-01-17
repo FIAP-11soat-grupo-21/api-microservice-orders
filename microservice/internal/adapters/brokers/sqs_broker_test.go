@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNewSQSBroker_MissingOrdersQueueURL(t *testing.T) {
+func TestNewSQSBroker_MissingOrderUpdateStatusQueueURL(t *testing.T) {
 	config := BrokerConfig{
 		SQSUpdateOrderStatusQueueURL: "", // Missing
 		AWSRegion:                    "us-east-1",
@@ -18,12 +18,26 @@ func TestNewSQSBroker_MissingOrdersQueueURL(t *testing.T) {
 	broker, err := NewSQSBroker(config)
 	assert.Error(t, err)
 	assert.Nil(t, broker)
-	assert.Contains(t, err.Error(), "SQS orders queue URL is required")
+	assert.Contains(t, err.Error(), "SQS update order status queue URL is required")
+}
+
+func TestNewSQSBroker_MissingOrderErrorQueueURL(t *testing.T) {
+	config := BrokerConfig{
+		SQSUpdateOrderStatusQueueURL: "http://localhost:4566/000000000000/update-order-status-queue",
+		SQSOrderErrorQueueURL:        "",
+		AWSRegion:                    "us-east-1",
+	}
+
+	broker, err := NewSQSBroker(config)
+	assert.Error(t, err)
+	assert.Nil(t, broker)
+	assert.Contains(t, err.Error(), "SQS order error queue URL is required")
 }
 
 func TestNewSQSBroker_ValidConfig(t *testing.T) {
 	config := BrokerConfig{
-		SQSUpdateOrderStatusQueueURL: "https://sqs.us-east-1.amazonaws.com/123456789012/orders-queue",
+		SQSUpdateOrderStatusQueueURL: "http://localhost:4566/000000000000/update-order-status-queue",
+		SQSOrderErrorQueueURL:        "http://localhost:4566/000000000000/order-error-queue",
 		AWSRegion:                    "us-east-1",
 	}
 
@@ -43,10 +57,10 @@ func TestNewSQSBroker_ValidConfig(t *testing.T) {
 func TestSQSBroker_Structure(t *testing.T) {
 	// Test that the SQSBroker struct has the expected fields
 	broker := &SQSBroker{
-		updateOrderStatusQueueURL: "https://sqs.us-east-1.amazonaws.com/123456789012/orders-queue",
+		updateOrderStatusQueueURL: "http://localhost:4566/000000000000/update-order-status-queue",
 	}
 
-	assert.Equal(t, "https://sqs.us-east-1.amazonaws.com/123456789012/orders-queue", broker.updateOrderStatusQueueURL)
+	assert.Equal(t, "http://localhost:4566/000000000000/update-order-status-queue", broker.updateOrderStatusQueueURL)
 }
 
 func TestSQSBroker_Close(t *testing.T) {
@@ -57,7 +71,8 @@ func TestSQSBroker_Close(t *testing.T) {
 
 func TestSQSBroker_ConsumeOrderUpdates_ContextCancellation(t *testing.T) {
 	config := BrokerConfig{
-		SQSUpdateOrderStatusQueueURL: "https://sqs.us-east-1.amazonaws.com/123456789012/orders-queue",
+		SQSUpdateOrderStatusQueueURL: "http://localhost:4566/000000000000/update-order-status-queue",
+		SQSOrderErrorQueueURL:        "http://localhost:4566/000000000000/order-error-queue",
 		AWSRegion:                    "us-east-1",
 	}
 
@@ -91,7 +106,8 @@ func TestOrderUpdateMessage_Structure(t *testing.T) {
 
 func TestSQSBroker_pollOrderUpdateMessages_Coverage(t *testing.T) {
 	config := BrokerConfig{
-		SQSUpdateOrderStatusQueueURL: "https://sqs.us-east-1.amazonaws.com/123456789012/test-orders-queue",
+		SQSUpdateOrderStatusQueueURL: "http://localhost:4566/000000000000/update-order-status-queue",
+		SQSOrderErrorQueueURL:        "http://localhost:4566/000000000000/order-error-queue",
 		AWSRegion:                    "us-east-1",
 	}
 
@@ -116,7 +132,8 @@ func TestSQSBroker_pollOrderUpdateMessages_Coverage(t *testing.T) {
 
 func TestSQSBroker_deleteMessage_Coverage(t *testing.T) {
 	config := BrokerConfig{
-		SQSUpdateOrderStatusQueueURL: "https://sqs.us-east-1.amazonaws.com/123456789012/test-orders-queue",
+		SQSUpdateOrderStatusQueueURL: "http://localhost:4566/000000000000/update-order-status-queue",
+		SQSOrderErrorQueueURL:        "http://localhost:4566/000000000000/order-error-queue",
 		AWSRegion:                    "us-east-1",
 	}
 
@@ -139,7 +156,8 @@ func TestSQSBroker_deleteMessage_Coverage(t *testing.T) {
 
 func TestSQSBroker_ConsumeOrderUpdates_LongRunning(t *testing.T) {
 	config := BrokerConfig{
-		SQSUpdateOrderStatusQueueURL: "https://sqs.us-east-1.amazonaws.com/123456789012/test-orders-queue",
+		SQSUpdateOrderStatusQueueURL: "http://localhost:4566/000000000000/update-order-status-queue",
+		SQSOrderErrorQueueURL:        "http://localhost:4566/000000000000/order-error-queue",
 		AWSRegion:                    "us-east-1",
 	}
 
@@ -183,7 +201,8 @@ func TestSQSBroker_Configuration_Validation(t *testing.T) {
 		{
 			name: "Valid config",
 			config: BrokerConfig{
-				SQSUpdateOrderStatusQueueURL: "https://sqs.us-east-1.amazonaws.com/123456789012/orders-queue",
+				SQSUpdateOrderStatusQueueURL: "http://localhost:4566/000000000000/update-order-status-queue",
+				SQSOrderErrorQueueURL:        "http://localhost:4566/000000000000/order-error-queue",
 				AWSRegion:                    "us-east-1",
 			},
 			expectError: false,
@@ -192,15 +211,17 @@ func TestSQSBroker_Configuration_Validation(t *testing.T) {
 			name: "Missing queue URL",
 			config: BrokerConfig{
 				SQSUpdateOrderStatusQueueURL: "",
+				SQSOrderErrorQueueURL:        "http://localhost:4566/000000000000/order-error-queue",
 				AWSRegion:                    "us-east-1",
 			},
 			expectError:   true,
-			errorContains: "SQS orders queue URL is required",
+			errorContains: "SQS update order status queue URL is required",
 		},
 		{
 			name: "Invalid queue URL format",
 			config: BrokerConfig{
 				SQSUpdateOrderStatusQueueURL: "invalid-url",
+				SQSOrderErrorQueueURL:        "http://localhost:4566/000000000000/order-error-queue",
 				AWSRegion:                    "us-east-1",
 			},
 			expectError: false, // URL validation happens at AWS level
@@ -208,7 +229,8 @@ func TestSQSBroker_Configuration_Validation(t *testing.T) {
 		{
 			name: "Missing AWS region",
 			config: BrokerConfig{
-				SQSUpdateOrderStatusQueueURL: "https://sqs.us-east-1.amazonaws.com/123456789012/orders-queue",
+				SQSUpdateOrderStatusQueueURL: "http://localhost:4566/000000000000/update-order-status-queue",
+				SQSOrderErrorQueueURL:        "http://localhost:4566/000000000000/order-error-queue",
 				AWSRegion:                    "",
 			},
 			expectError: false, // Region can be empty, AWS SDK will use default

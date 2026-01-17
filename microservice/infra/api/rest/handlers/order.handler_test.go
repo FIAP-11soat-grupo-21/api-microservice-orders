@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -12,6 +13,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"microservice/infra/api/rest/schemas"
+	"microservice/internal/adapters/brokers"
 	"microservice/internal/adapters/daos"
 	"microservice/internal/adapters/dtos"
 	"microservice/internal/interfaces"
@@ -92,24 +94,51 @@ func (m *mockOrderStatusDS) FindAll() ([]daos.OrderStatusDAO, error) {
 	return []daos.OrderStatusDAO{}, nil
 }
 
-func setupMocks(orderDS *mockOrderDS, statusDS *mockOrderStatusDS) func() {
+type mockBroker struct {
+	publishFunc func(topic string, message interface{}) error
+}
+
+func (m *mockBroker) ConsumeOrderUpdates(ctx context.Context, handler brokers.OrderUpdateHandler) error {
+	return nil
+}
+func (m *mockBroker) ConsumeOrderError(ctx context.Context, handler brokers.OrderErrorHandler) error {
+	return nil
+}
+
+func (m *mockBroker) Close() error {
+	return nil
+}
+
+func (m *mockBroker) PublishOnTopic(ctx context.Context, topic string, message interface{}) error {
+	if m.publishFunc != nil {
+		return m.publishFunc(topic, message)
+	}
+	return nil
+}
+
+func setupMocks(orderDS *mockOrderDS, statusDS *mockOrderStatusDS, broker *mockBroker) func() {
 	factories.SetNewOrderDataSource(func() interfaces.IOrderDataSource {
 		return orderDS
 	})
 	factories.SetNewOrderStatusDataSource(func() interfaces.IOrderStatusDataSource {
 		return statusDS
 	})
+	factories.SetNewMessageBroker(func() brokers.MessageBroker {
+		return broker
+	})
 
 	return func() {
 		factories.SetNewOrderDataSource(nil)
 		factories.SetNewOrderStatusDataSource(nil)
+		factories.SetNewMessageBroker(nil)
 	}
 }
 
 func TestNewOrderHandler(t *testing.T) {
 	orderDS := &mockOrderDS{}
 	statusDS := &mockOrderStatusDS{}
-	cleanup := setupMocks(orderDS, statusDS)
+	broker := &mockBroker{}
+	cleanup := setupMocks(orderDS, statusDS, broker)
 	defer cleanup()
 
 	handler := NewOrderHandler()
@@ -129,7 +158,12 @@ func TestOrderHandler_Create_Success(t *testing.T) {
 			return daos.OrderStatusDAO{ID: "status-1", Name: "Pending"}, nil
 		},
 	}
-	cleanup := setupMocks(orderDS, statusDS)
+	messageBroker := &mockBroker{
+		publishFunc: func(topic string, message interface{}) error {
+			return nil
+		},
+	}
+	cleanup := setupMocks(orderDS, statusDS, messageBroker)
 	defer cleanup()
 
 	handler := NewOrderHandler()
@@ -158,7 +192,8 @@ func TestOrderHandler_Create_Success(t *testing.T) {
 func TestOrderHandler_Create_InvalidBody(t *testing.T) {
 	orderDS := &mockOrderDS{}
 	statusDS := &mockOrderStatusDS{}
-	cleanup := setupMocks(orderDS, statusDS)
+	messageBroker := &mockBroker{}
+	cleanup := setupMocks(orderDS, statusDS, messageBroker)
 	defer cleanup()
 
 	handler := NewOrderHandler()
@@ -198,7 +233,8 @@ func TestOrderHandler_FindAll_Success(t *testing.T) {
 		},
 	}
 	statusDS := &mockOrderStatusDS{}
-	cleanup := setupMocks(orderDS, statusDS)
+	messageBroker := &mockBroker{}
+	cleanup := setupMocks(orderDS, statusDS, messageBroker)
 	defer cleanup()
 
 	handler := NewOrderHandler()
@@ -223,7 +259,8 @@ func TestOrderHandler_FindAll_WithFilters(t *testing.T) {
 		},
 	}
 	statusDS := &mockOrderStatusDS{}
-	cleanup := setupMocks(orderDS, statusDS)
+	messageBroker := &mockBroker{}
+	cleanup := setupMocks(orderDS, statusDS, messageBroker)
 	defer cleanup()
 
 	handler := NewOrderHandler()
@@ -260,7 +297,8 @@ func TestOrderHandler_FindByID_Success(t *testing.T) {
 		},
 	}
 	statusDS := &mockOrderStatusDS{}
-	cleanup := setupMocks(orderDS, statusDS)
+	messageBroker := &mockBroker{}
+	cleanup := setupMocks(orderDS, statusDS, messageBroker)
 	defer cleanup()
 
 	handler := NewOrderHandler()
@@ -304,7 +342,8 @@ func TestOrderHandler_Update_Success(t *testing.T) {
 			return daos.OrderStatusDAO{ID: "status-2", Name: "Confirmed"}, nil
 		},
 	}
-	cleanup := setupMocks(orderDS, statusDS)
+	messageBroker := &mockBroker{}
+	cleanup := setupMocks(orderDS, statusDS, messageBroker)
 	defer cleanup()
 
 	handler := NewOrderHandler()
@@ -329,7 +368,8 @@ func TestOrderHandler_Update_Success(t *testing.T) {
 func TestOrderHandler_Update_InvalidBody(t *testing.T) {
 	orderDS := &mockOrderDS{}
 	statusDS := &mockOrderStatusDS{}
-	cleanup := setupMocks(orderDS, statusDS)
+	messageBroker := &mockBroker{}
+	cleanup := setupMocks(orderDS, statusDS, messageBroker)
 	defer cleanup()
 
 	handler := NewOrderHandler()
@@ -368,7 +408,8 @@ func TestOrderHandler_Delete_Success(t *testing.T) {
 		},
 	}
 	statusDS := &mockOrderStatusDS{}
-	cleanup := setupMocks(orderDS, statusDS)
+	messageBroker := &mockBroker{}
+	cleanup := setupMocks(orderDS, statusDS, messageBroker)
 	defer cleanup()
 
 	handler := NewOrderHandler()
@@ -396,7 +437,8 @@ func TestOrderHandler_FindAllStatus_Success(t *testing.T) {
 			}, nil
 		},
 	}
-	cleanup := setupMocks(orderDS, statusDS)
+	messageBroker := &mockBroker{}
+	cleanup := setupMocks(orderDS, statusDS, messageBroker)
 	defer cleanup()
 
 	handler := NewOrderHandler()
@@ -456,7 +498,8 @@ func TestOrderHandler_Create_Error(t *testing.T) {
 			return daos.OrderStatusDAO{}, errors.New("status not found")
 		},
 	}
-	cleanup := setupMocks(orderDS, statusDS)
+	messageBroker := &mockBroker{}
+	cleanup := setupMocks(orderDS, statusDS, messageBroker)
 	defer cleanup()
 
 	handler := NewOrderHandler()
@@ -489,7 +532,8 @@ func TestOrderHandler_FindAll_Error(t *testing.T) {
 		},
 	}
 	statusDS := &mockOrderStatusDS{}
-	cleanup := setupMocks(orderDS, statusDS)
+	messageBroker := &mockBroker{}
+	cleanup := setupMocks(orderDS, statusDS, messageBroker)
 	defer cleanup()
 
 	handler := NewOrderHandler()
@@ -514,7 +558,8 @@ func TestOrderHandler_FindByID_Error(t *testing.T) {
 		},
 	}
 	statusDS := &mockOrderStatusDS{}
-	cleanup := setupMocks(orderDS, statusDS)
+	messageBroker := &mockBroker{}
+	cleanup := setupMocks(orderDS, statusDS, messageBroker)
 	defer cleanup()
 
 	handler := NewOrderHandler()
@@ -539,7 +584,8 @@ func TestOrderHandler_Update_Error(t *testing.T) {
 		},
 	}
 	statusDS := &mockOrderStatusDS{}
-	cleanup := setupMocks(orderDS, statusDS)
+	messageBroker := &mockBroker{}
+	cleanup := setupMocks(orderDS, statusDS, messageBroker)
 	defer cleanup()
 
 	handler := NewOrderHandler()
@@ -568,7 +614,8 @@ func TestOrderHandler_Delete_Error(t *testing.T) {
 		},
 	}
 	statusDS := &mockOrderStatusDS{}
-	cleanup := setupMocks(orderDS, statusDS)
+	messageBroker := &mockBroker{}
+	cleanup := setupMocks(orderDS, statusDS, messageBroker)
 	defer cleanup()
 
 	handler := NewOrderHandler()
@@ -593,7 +640,8 @@ func TestOrderHandler_FindAllStatus_Error(t *testing.T) {
 			return nil, errors.New("database error")
 		},
 	}
-	cleanup := setupMocks(orderDS, statusDS)
+	messageBroker := &mockBroker{}
+	cleanup := setupMocks(orderDS, statusDS, messageBroker)
 	defer cleanup()
 
 	handler := NewOrderHandler()
@@ -636,7 +684,8 @@ func TestOrderHandler_UpdateStatus_Success(t *testing.T) {
 			return daos.OrderStatusDAO{ID: "status-2", Name: name}, nil
 		},
 	}
-	cleanup := setupMocks(orderDS, statusDS)
+	messageBroker := &mockBroker{}
+	cleanup := setupMocks(orderDS, statusDS, messageBroker)
 	defer cleanup()
 
 	handler := NewOrderHandler()
@@ -671,7 +720,8 @@ func TestOrderHandler_UpdateStatus_Success(t *testing.T) {
 func TestOrderHandler_UpdateStatus_InvalidBody(t *testing.T) {
 	orderDS := &mockOrderDS{}
 	statusDS := &mockOrderStatusDS{}
-	cleanup := setupMocks(orderDS, statusDS)
+	messageBroker := &mockBroker{}
+	cleanup := setupMocks(orderDS, statusDS, messageBroker)
 	defer cleanup()
 
 	handler := NewOrderHandler()
@@ -707,7 +757,8 @@ func TestOrderHandler_UpdateStatus_OrderNotFound(t *testing.T) {
 		},
 	}
 	statusDS := &mockOrderStatusDS{}
-	cleanup := setupMocks(orderDS, statusDS)
+	messageBroker := &mockBroker{}
+	cleanup := setupMocks(orderDS, statusDS, messageBroker)
 	defer cleanup()
 
 	handler := NewOrderHandler()
@@ -759,7 +810,8 @@ func TestOrderHandler_UpdateStatus_StatusNotFound(t *testing.T) {
 			return daos.OrderStatusDAO{}, errors.New("status not found")
 		},
 	}
-	cleanup := setupMocks(orderDS, statusDS)
+	messageBroker := &mockBroker{}
+	cleanup := setupMocks(orderDS, statusDS, messageBroker)
 	defer cleanup()
 
 	handler := NewOrderHandler()
@@ -814,7 +866,8 @@ func TestOrderHandler_UpdateStatus_UpdateError(t *testing.T) {
 			return daos.OrderStatusDAO{ID: "status-2", Name: name}, nil
 		},
 	}
-	cleanup := setupMocks(orderDS, statusDS)
+	messageBroker := &mockBroker{}
+	cleanup := setupMocks(orderDS, statusDS, messageBroker)
 	defer cleanup()
 
 	handler := NewOrderHandler()
@@ -873,7 +926,8 @@ func TestOrderHandler_UpdateStatus_SpecialCharactersInID(t *testing.T) {
 			return daos.OrderStatusDAO{ID: "status-2", Name: name}, nil
 		},
 	}
-	cleanup := setupMocks(orderDS, statusDS)
+	messageBroker := &mockBroker{}
+	cleanup := setupMocks(orderDS, statusDS, messageBroker)
 	defer cleanup()
 
 	handler := NewOrderHandler()
@@ -945,7 +999,8 @@ func TestOrderHandler_UpdateStatus_DifferentStatuses(t *testing.T) {
 					return daos.OrderStatusDAO{ID: "status-2", Name: name}, nil
 				},
 			}
-			cleanup := setupMocks(orderDS, statusDS)
+			messageBroker := &mockBroker{}
+			cleanup := setupMocks(orderDS, statusDS, messageBroker)
 			defer cleanup()
 
 			handler := NewOrderHandler()
