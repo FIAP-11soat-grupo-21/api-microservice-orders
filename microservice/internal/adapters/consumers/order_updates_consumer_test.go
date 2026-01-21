@@ -47,6 +47,7 @@ func (m *mockBroker) Close() error {
 type mockOrderGateway struct {
 	findByIDFunc func(id string) (*entities.Order, error)
 	updateFunc   func(order entities.Order) error
+	deleteFunc   func(id string) error
 }
 
 func (m *mockOrderGateway) FindByID(id string) (*entities.Order, error) {
@@ -72,6 +73,9 @@ func (m *mockOrderGateway) FindAll(filter dtos.OrderFilterDTO) ([]entities.Order
 }
 
 func (m *mockOrderGateway) Delete(id string) error {
+	if m.deleteFunc != nil {
+		return m.deleteFunc(id)
+	}
 	return nil
 }
 
