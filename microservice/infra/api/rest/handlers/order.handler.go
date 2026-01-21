@@ -21,8 +21,14 @@ func NewOrderHandler() *OrderHandler {
 	orderDataSource := factories.NewOrderDataSource()
 	orderStatusDataSource := factories.NewOrderStatusDataSource()
 	broker := factories.NewMessageBroker()
+	apiClient := factories.NewApiClient()
 
-	controller := controllers.NewOrderController(orderDataSource, orderStatusDataSource, broker)
+	controller := controllers.NewOrderController(
+		orderDataSource,
+		orderStatusDataSource,
+		broker,
+		apiClient,
+	)
 
 	return &OrderHandler{
 		controller: controller,

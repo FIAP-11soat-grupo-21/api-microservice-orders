@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"microservice/infra/api/client"
 	"microservice/internal/adapters/brokers"
 	"microservice/internal/adapters/dtos"
 	"microservice/internal/domain/entities"
@@ -19,13 +20,20 @@ type CreateOrderUseCase struct {
 	orderGateway       interfaces.IOrderGateway
 	orderStatusGateway interfaces.IOrderStatusGateway
 	messageBroker      brokers.MessageBroker
+	apiClient          client.IApiClient
 }
 
-func NewCreateOrderUseCase(orderGateway interfaces.IOrderGateway, orderStatusGateway interfaces.IOrderStatusGateway, messageBroker brokers.MessageBroker) *CreateOrderUseCase {
+func NewCreateOrderUseCase(
+	orderGateway interfaces.IOrderGateway,
+	orderStatusGateway interfaces.IOrderStatusGateway,
+	messageBroker brokers.MessageBroker,
+	apiClient client.IApiClient,
+) *CreateOrderUseCase {
 	return &CreateOrderUseCase{
 		orderGateway:       orderGateway,
 		orderStatusGateway: orderStatusGateway,
 		messageBroker:      messageBroker,
+		apiClient:          apiClient,
 	}
 }
 
@@ -40,12 +48,28 @@ func (uc *CreateOrderUseCase) Execute(customerID *string, items []dtos.CreateOrd
 	order.CreatedAt = time.Now()
 
 	for _, item := range items {
+		path := "/products/" + item.ProductID
+
+		product := new(client.ProductResponseDTO)
+
+		err := uc.apiClient.Get(path, product)
+
+		if err != nil {
+			return entities.Order{}, err
+		}
+
+		if product.Active == false {
+			return entities.Order{}, &exceptions.OrderItemProductInactiveException{
+				ProductID: item.ProductID,
+			}
+		}
+
 		orderItem, err := entities.NewOrderItem(
 			identityUtils.NewUUIDV4(),
 			item.ProductID,
 			order.ID,
 			item.Quantity,
-			item.Price,
+			product.Price,
 		)
 		if err != nil {
 			return entities.Order{}, err

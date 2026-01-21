@@ -9,9 +9,10 @@ import (
 )
 
 type Config struct {
-	GoEnv   string
-	APIPort string
-	APIHost string
+	GoEnv         string
+	APIPort       string
+	APIHost       string
+	APIGatewayURL string
 
 	Database struct {
 		RunMigrations bool
@@ -78,7 +79,9 @@ func (c *Config) Load() *Config {
 	c.GoEnv = getEnv("GO_ENV")
 	c.APIPort = getEnv("API_PORT")
 	c.APIHost = getEnv("API_HOST")
+	c.APIGatewayURL = getEnv("API_GATEWAY_URL")
 
+	// Database Configuration
 	c.Database.RunMigrations = getEnv("DB_RUN_MIGRATIONS") == "true"
 	c.Database.Host = getEnv("DB_HOST")
 	c.Database.Name = getEnv("DB_NAME")
