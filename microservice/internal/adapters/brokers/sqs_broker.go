@@ -116,8 +116,6 @@ func (s *SQSBroker) pollOrderUpdateMessages(ctx context.Context, handler OrderUp
 			continue
 		}
 
-		log.Printf("[SQS] Processing order update for order %s", updateMsg.OrderID)
-
 		err := handler(updateMsg)
 		if err != nil {
 			log.Printf("[SQS] Error processing order update message for order %s: %v", updateMsg.OrderID, err)
@@ -191,13 +189,18 @@ func (s *SQSBroker) pollOrderErrorMessages(ctx context.Context, handler OrderErr
 }
 
 func (s *SQSBroker) unmarshalMessage(message types.Message, obj any) error {
+	// Try to unmarshal as SNS notification first
 	var snsNotification SNSNotification
-
-	if err := json.Unmarshal([]byte(*message.Body), &snsNotification); err != nil {
-		return err
+	if err := json.Unmarshal([]byte(*message.Body), &snsNotification); err == nil && snsNotification.Type != "" {
+		// Message was published via SNS
+		if err := json.Unmarshal([]byte(snsNotification.Message), &obj); err != nil {
+			return err
+		}
+		return nil
 	}
 
-	if err := json.Unmarshal([]byte(snsNotification.Message), &obj); err != nil {
+	// Message was published directly to SQS
+	if err := json.Unmarshal([]byte(*message.Body), &obj); err != nil {
 		return err
 	}
 

@@ -2,15 +2,11 @@ package brokers
 
 import (
 	"context"
-	"time"
 )
 
 type OrderUpdateMessage struct {
-	Type      string                 `json:"type"`
-	OrderID   string                 `json:"order_id"`
-	Status    string                 `json:"status"`
-	UpdatedAt time.Time              `json:"updated_at"`
-	Metadata  map[string]interface{} `json:"metadata,omitempty"`
+	OrderID string `json:"order_id"`
+	Status  string `json:"status"`
 }
 
 type OrderErrorMessage struct {

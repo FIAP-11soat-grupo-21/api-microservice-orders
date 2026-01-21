@@ -2,7 +2,6 @@ package use_cases
 
 import (
 	"fmt"
-	"log"
 
 	"microservice/internal/domain/entities"
 	"microservice/internal/interfaces"
@@ -31,8 +30,6 @@ func NewUpdateOrderStatusUseCase(orderGateway interfaces.IOrderGateway, orderSta
 }
 
 func (uc *UpdateOrderStatusUseCase) Execute(dto UpdateOrderStatusDTO) (*UpdateOrderStatusResult, error) {
-	log.Printf("Updating order %s status to: %s", dto.OrderID, dto.Status)
-
 	// Buscar o pedido
 	order, err := uc.orderGateway.FindByID(dto.OrderID)
 	if err != nil {
@@ -62,7 +59,6 @@ func (uc *UpdateOrderStatusUseCase) Execute(dto UpdateOrderStatusDTO) (*UpdateOr
 		Message: fmt.Sprintf("Order %s status updated to %s", dto.OrderID, orderStatusName),
 	}
 
-	log.Printf("Order %s status successfully updated to: %s", dto.OrderID, orderStatusName)
 	return result, nil
 }
 
