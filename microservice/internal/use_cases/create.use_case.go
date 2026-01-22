@@ -58,7 +58,7 @@ func (uc *CreateOrderUseCase) Execute(customerID *string, items []dtos.CreateOrd
 			return entities.Order{}, err
 		}
 
-		if product.Active == false {
+		if !product.Active {
 			return entities.Order{}, &exceptions.OrderItemProductInactiveException{
 				ProductID: item.ProductID,
 			}

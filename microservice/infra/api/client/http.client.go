@@ -48,7 +48,9 @@ func (c *HTTPClient) Get(path string, obj any) error {
 		return fmt.Errorf("unexpected content type: %s", resp.Header.Get("Content-Type"))
 	}
 
-	err = json.Unmarshal(body, &obj)
+	if err := json.Unmarshal(body, &obj); err != nil {
+		return err
+	}
 
 	return nil
 }

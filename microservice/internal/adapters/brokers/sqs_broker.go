@@ -176,7 +176,9 @@ func (s *SQSBroker) pollOrderErrorMessages(ctx context.Context, handler OrderErr
 		err := handler(orderErrorMsg)
 		if err != nil {
 			log.Printf("[SQS] Error processing order error message for order %s: %v", orderErrorMsg.OrderID, err)
-			s.deleteMessage(ctx, s.orderErrorQueueURL, message)
+			if err := s.deleteMessage(ctx, s.orderErrorQueueURL, message); err != nil {
+				log.Printf("[SQS] Error deleting order error message: %v", err)
+			}
 			continue
 		}
 
