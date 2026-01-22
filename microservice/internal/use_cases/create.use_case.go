@@ -1,13 +1,16 @@
 package use_cases
 
 import (
+	"context"
 	"time"
 
+	"microservice/infra/api/client"
 	"microservice/internal/adapters/brokers"
 	"microservice/internal/adapters/dtos"
 	"microservice/internal/domain/entities"
 	"microservice/internal/domain/exceptions"
 	"microservice/internal/interfaces"
+	"microservice/utils/config"
 	identityUtils "microservice/utils/identity"
 )
 
@@ -17,13 +20,20 @@ type CreateOrderUseCase struct {
 	orderGateway       interfaces.IOrderGateway
 	orderStatusGateway interfaces.IOrderStatusGateway
 	messageBroker      brokers.MessageBroker
+	apiClient          client.IApiClient
 }
 
-func NewCreateOrderUseCase(orderGateway interfaces.IOrderGateway, orderStatusGateway interfaces.IOrderStatusGateway, messageBroker brokers.MessageBroker) *CreateOrderUseCase {
+func NewCreateOrderUseCase(
+	orderGateway interfaces.IOrderGateway,
+	orderStatusGateway interfaces.IOrderStatusGateway,
+	messageBroker brokers.MessageBroker,
+	apiClient client.IApiClient,
+) *CreateOrderUseCase {
 	return &CreateOrderUseCase{
 		orderGateway:       orderGateway,
 		orderStatusGateway: orderStatusGateway,
 		messageBroker:      messageBroker,
+		apiClient:          apiClient,
 	}
 }
 
@@ -38,12 +48,28 @@ func (uc *CreateOrderUseCase) Execute(customerID *string, items []dtos.CreateOrd
 	order.CreatedAt = time.Now()
 
 	for _, item := range items {
+		path := "/products/" + item.ProductID
+
+		product := new(client.ProductResponseDTO)
+
+		err := uc.apiClient.Get(path, product)
+
+		if err != nil {
+			return entities.Order{}, err
+		}
+
+		if !product.Active {
+			return entities.Order{}, &exceptions.OrderItemProductInactiveException{
+				ProductID: item.ProductID,
+			}
+		}
+
 		orderItem, err := entities.NewOrderItem(
 			identityUtils.NewUUIDV4(),
 			item.ProductID,
 			order.ID,
 			item.Quantity,
-			item.Price,
+			product.Price,
 		)
 		if err != nil {
 			return entities.Order{}, err
@@ -57,6 +83,18 @@ func (uc *CreateOrderUseCase) Execute(customerID *string, items []dtos.CreateOrd
 	}
 
 	err = uc.orderGateway.Create(*order)
+	if err != nil {
+		return entities.Order{}, err
+	}
+
+	cfg := config.LoadConfig()
+
+	ctx := context.Background()
+	orderCreatedTopic := cfg.MessageBroker.SNS.OrderCreatedTopicARN
+	message := order.ToMap()
+
+	err = uc.messageBroker.PublishOnTopic(ctx, orderCreatedTopic, message)
+
 	if err != nil {
 		return entities.Order{}, err
 	}

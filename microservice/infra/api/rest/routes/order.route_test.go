@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"microservice/mocks"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -11,6 +12,9 @@ func init() {
 }
 
 func TestRegisterOrderRoutes(t *testing.T) {
+	mocks.SetupEnv()
+	defer mocks.CleanupEnv()
+
 	router := gin.New()
 	group := router.Group("/orders")
 
@@ -24,6 +28,9 @@ func TestRegisterOrderRoutes(t *testing.T) {
 }
 
 func TestRegisterOrderStatusRoutes(t *testing.T) {
+	mocks.SetupEnv()
+	defer mocks.CleanupEnv()
+
 	router := gin.New()
 	group := router.Group("/orders/status")
 

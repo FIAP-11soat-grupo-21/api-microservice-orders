@@ -10,3 +10,11 @@ func (e *InvalidOrderItemData) Error() string {
 	}
 	return e.Message
 }
+
+type OrderItemProductInactiveException struct {
+	ProductID string
+}
+
+func (e *OrderItemProductInactiveException) Error() string {
+	return "The product is inactive: " + e.ProductID
+}

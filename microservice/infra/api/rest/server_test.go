@@ -16,18 +16,20 @@ func TestInit_ProductionMode(t *testing.T) {
 	os.Setenv("GO_ENV", "production")
 	os.Setenv("API_HOST", "0.0.0.0")
 	os.Setenv("API_PORT", "8080")
+	os.Setenv("API_GATEWAY_URL", "http://localhost:8081")
 	os.Setenv("DB_HOST", "localhost")
 	os.Setenv("DB_PORT", "5432")
 	os.Setenv("DB_NAME", "test_db")
 	os.Setenv("DB_USERNAME", "test_user")
 	os.Setenv("DB_PASSWORD", "test_pass")
 	os.Setenv("DB_RUN_MIGRATIONS", "false")
-	
+
 	defer func() {
 		// Clean up environment variables
 		os.Unsetenv("GO_ENV")
 		os.Unsetenv("API_HOST")
 		os.Unsetenv("API_PORT")
+		os.Unsetenv("API_GATEWAY_URL")
 		os.Unsetenv("DB_HOST")
 		os.Unsetenv("DB_PORT")
 		os.Unsetenv("DB_NAME")
@@ -48,18 +50,20 @@ func TestInit_DevelopmentMode(t *testing.T) {
 	os.Setenv("GO_ENV", "development")
 	os.Setenv("API_HOST", "localhost")
 	os.Setenv("API_PORT", "3000")
+	os.Setenv("API_GATEWAY_URL", "http://localhost:8081")
 	os.Setenv("DB_HOST", "localhost")
 	os.Setenv("DB_PORT", "5432")
 	os.Setenv("DB_NAME", "test_db")
 	os.Setenv("DB_USERNAME", "test_user")
 	os.Setenv("DB_PASSWORD", "test_pass")
 	os.Setenv("DB_RUN_MIGRATIONS", "false")
-	
+
 	defer func() {
 		// Clean up environment variables
 		os.Unsetenv("GO_ENV")
 		os.Unsetenv("API_HOST")
 		os.Unsetenv("API_PORT")
+		os.Unsetenv("API_GATEWAY_URL")
 		os.Unsetenv("DB_HOST")
 		os.Unsetenv("DB_PORT")
 		os.Unsetenv("DB_NAME")
@@ -81,17 +85,19 @@ func TestInit_WithMigrations(t *testing.T) {
 	os.Setenv("GO_ENV", "development")
 	os.Setenv("API_HOST", "localhost")
 	os.Setenv("API_PORT", "3000")
+	os.Setenv("API_GATEWAY_URL", "http://localhost:8081")
 	os.Setenv("DB_HOST", "localhost")
 	os.Setenv("DB_PORT", "5432")
 	os.Setenv("DB_NAME", "test_db")
 	os.Setenv("DB_USERNAME", "test_user")
 	os.Setenv("DB_PASSWORD", "test_pass")
 	os.Setenv("DB_RUN_MIGRATIONS", "true")
-	
+
 	defer func() {
 		// Clean up environment variables
 		os.Unsetenv("GO_ENV")
 		os.Unsetenv("API_HOST")
+		os.Unsetenv("API_GATEWAY_URL")
 		os.Unsetenv("API_PORT")
 		os.Unsetenv("DB_HOST")
 		os.Unsetenv("DB_PORT")
@@ -112,18 +118,20 @@ func TestInit_WithoutMigrations(t *testing.T) {
 	os.Setenv("GO_ENV", "development")
 	os.Setenv("API_HOST", "localhost")
 	os.Setenv("API_PORT", "3000")
+	os.Setenv("API_GATEWAY_URL", "http://localhost:8081")
 	os.Setenv("DB_HOST", "localhost")
 	os.Setenv("DB_PORT", "5432")
 	os.Setenv("DB_NAME", "test_db")
 	os.Setenv("DB_USERNAME", "test_user")
 	os.Setenv("DB_PASSWORD", "test_pass")
 	os.Setenv("DB_RUN_MIGRATIONS", "false")
-	
+
 	defer func() {
 		// Clean up environment variables
 		os.Unsetenv("GO_ENV")
 		os.Unsetenv("API_HOST")
 		os.Unsetenv("API_PORT")
+		os.Unsetenv("API_GATEWAY_URL")
 		os.Unsetenv("DB_HOST")
 		os.Unsetenv("DB_PORT")
 		os.Unsetenv("DB_NAME")
@@ -138,25 +146,33 @@ func TestInit_WithoutMigrations(t *testing.T) {
 }
 
 func TestInit_MessageBrokerConfiguration(t *testing.T) {
-	// Test with RabbitMQ configuration
+	// Test with SQS configuration
 	os.Setenv("GO_ENV", "development")
 	os.Setenv("API_HOST", "localhost")
 	os.Setenv("API_PORT", "3000")
+	os.Setenv("API_GATEWAY_URL", "http://localhost:8081")
 	os.Setenv("DB_HOST", "localhost")
 	os.Setenv("DB_PORT", "5432")
 	os.Setenv("DB_NAME", "test_db")
 	os.Setenv("DB_USERNAME", "test_user")
 	os.Setenv("DB_PASSWORD", "test_pass")
 	os.Setenv("DB_RUN_MIGRATIONS", "false")
-	os.Setenv("MESSAGE_BROKER_TYPE", "rabbitmq")
-	os.Setenv("RABBITMQ_URL", "amqp://localhost:5672")
-	os.Setenv("RABBITMQ_ORDERS_QUEUE", "orders-queue")
-	
+	os.Setenv("MESSAGE_BROKER_TYPE", "sqs")
+	os.Setenv("AWS_REGION", "us-east-1")
+	os.Setenv("AWS_ACCESS_KEY_ID", "test")
+	os.Setenv("AWS_SECRET_ACCESS_KEY", "test")
+	os.Setenv("AWS_ENDPOINT", "http://localhost:4566")
+	os.Setenv("SQS_UPDATE_ORDER_STATUS_QUEUE_URL", "http://localhost:4566/000000000000/update-order-status-queue")
+	os.Setenv("SQS_ORDER_ERROR_QUEUE_URL", "http://localhost:4566/000000000000/order-error-queue")
+	os.Setenv("SNS_ORDER_ERROR_TOPIC_ARN", "arn:aws:sns:us-west-2:000000000000:order-error-topic")
+	os.Setenv("SNS_ORDER_CREATED_TOPIC_ARN", "arn:aws:sns:us-west-2:000000000000:order-created-topic")
+
 	defer func() {
 		// Clean up environment variables
 		os.Unsetenv("GO_ENV")
 		os.Unsetenv("API_HOST")
 		os.Unsetenv("API_PORT")
+		os.Unsetenv("API_GATEWAY_URL")
 		os.Unsetenv("DB_HOST")
 		os.Unsetenv("DB_PORT")
 		os.Unsetenv("DB_NAME")
@@ -164,8 +180,14 @@ func TestInit_MessageBrokerConfiguration(t *testing.T) {
 		os.Unsetenv("DB_PASSWORD")
 		os.Unsetenv("DB_RUN_MIGRATIONS")
 		os.Unsetenv("MESSAGE_BROKER_TYPE")
-		os.Unsetenv("RABBITMQ_URL")
-		os.Unsetenv("RABBITMQ_ORDERS_QUEUE")
+		os.Unsetenv("SQS_UPDATE_ORDER_STATUS_QUEUE_URL")
+		os.Unsetenv("AWS_REGION")
+		os.Unsetenv("AWS_ACCESS_KEY_ID")
+		os.Unsetenv("AWS_SECRET_ACCESS_KEY")
+		os.Unsetenv("AWS_ENDPOINT")
+		os.Unsetenv("SQS_ORDER_ERROR_QUEUE_URL")
+		os.Unsetenv("SNS_ORDER_ERROR_TOPIC_ARN")
+		os.Unsetenv("SNS_ORDER_CREATED_TOPIC_ARN")
 	}()
 
 	// Test that config loads correctly with message broker
@@ -179,6 +201,7 @@ func TestInit_SQSConfiguration(t *testing.T) {
 	os.Setenv("GO_ENV", "development")
 	os.Setenv("API_HOST", "localhost")
 	os.Setenv("API_PORT", "3000")
+	os.Setenv("API_GATEWAY_URL", "http://localhost:8081")
 	os.Setenv("DB_HOST", "localhost")
 	os.Setenv("DB_PORT", "5432")
 	os.Setenv("DB_NAME", "test_db")
@@ -186,14 +209,21 @@ func TestInit_SQSConfiguration(t *testing.T) {
 	os.Setenv("DB_PASSWORD", "test_pass")
 	os.Setenv("DB_RUN_MIGRATIONS", "false")
 	os.Setenv("MESSAGE_BROKER_TYPE", "sqs")
-	os.Setenv("SQS_ORDERS_QUEUE_URL", "https://sqs.us-east-1.amazonaws.com/123456789012/orders-queue")
 	os.Setenv("AWS_REGION", "us-east-1")
-	
+	os.Setenv("AWS_ACCESS_KEY_ID", "test")
+	os.Setenv("AWS_SECRET_ACCESS_KEY", "test")
+	os.Setenv("AWS_ENDPOINT", "http://localhost:4566")
+	os.Setenv("SQS_UPDATE_ORDER_STATUS_QUEUE_URL", "http://localhost:4566/000000000000/update-order-status-queue")
+	os.Setenv("SQS_ORDER_ERROR_QUEUE_URL", "http://localhost:4566/000000000000/order-error-queue")
+	os.Setenv("SNS_ORDER_ERROR_TOPIC_ARN", "arn:aws:sns:us-west-2:000000000000:order-error-topic")
+	os.Setenv("SNS_ORDER_CREATED_TOPIC_ARN", "arn:aws:sns:us-west-2:000000000000:order-created-topic")
+
 	defer func() {
 		// Clean up environment variables
 		os.Unsetenv("GO_ENV")
 		os.Unsetenv("API_HOST")
 		os.Unsetenv("API_PORT")
+		os.Unsetenv("API_GATEWAY_URL")
 		os.Unsetenv("DB_HOST")
 		os.Unsetenv("DB_PORT")
 		os.Unsetenv("DB_NAME")
@@ -201,8 +231,14 @@ func TestInit_SQSConfiguration(t *testing.T) {
 		os.Unsetenv("DB_PASSWORD")
 		os.Unsetenv("DB_RUN_MIGRATIONS")
 		os.Unsetenv("MESSAGE_BROKER_TYPE")
-		os.Unsetenv("SQS_ORDERS_QUEUE_URL")
+		os.Unsetenv("SQS_UPDATE_ORDER_STATUS_QUEUE_URL")
 		os.Unsetenv("AWS_REGION")
+		os.Unsetenv("AWS_ACCESS_KEY_ID")
+		os.Unsetenv("AWS_SECRET_ACCESS_KEY")
+		os.Unsetenv("AWS_ENDPOINT")
+		os.Unsetenv("SQS_ORDER_ERROR_QUEUE_URL")
+		os.Unsetenv("SNS_ORDER_ERROR_TOPIC_ARN")
+		os.Unsetenv("SNS_ORDER_CREATED_TOPIC_ARN")
 	}()
 
 	// Test that config loads correctly with SQS
@@ -214,17 +250,17 @@ func TestInit_SQSConfiguration(t *testing.T) {
 func TestInit_DefaultConfiguration(t *testing.T) {
 	// Clear all environment variables to test defaults
 	envVars := []string{
-		"GO_ENV", "API_HOST", "API_PORT",
-		"DB_HOST", "DB_PORT", "DB_NAME",
-		"DB_USERNAME", "DB_PASSWORD", "DB_RUN_MIGRATIONS",
-		"MESSAGE_BROKER_TYPE", "RABBITMQ_URL", "RABBITMQ_ORDERS_QUEUE",
-		"SQS_ORDERS_QUEUE_URL", "AWS_REGION",
+		"GO_ENV", "API_PORT", "API_HOST", "API_GATEWAY_URL", "DB_RUN_MIGRATIONS",
+		"DB_HOST", "DB_NAME", "DB_PORT", "DB_USERNAME", "DB_PASSWORD",
+		"MESSAGE_BROKER_TYPE", "SQS_UPDATE_ORDER_STATUS_QUEUE_URL", "SQS_ORDER_ERROR_QUEUE_URL", "AWS_REGION",
+		"AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_ENDPOINT",
+		"SNS_ORDER_ERROR_TOPIC_ARN", "SNS_ORDER_CREATED_TOPIC_ARN",
 	}
-	
+
 	for _, envVar := range envVars {
 		os.Unsetenv(envVar)
 	}
-	
+
 	defer func() {
 		// Restore some basic environment variables for other tests
 		os.Setenv("GO_ENV", "test")
@@ -240,17 +276,17 @@ func TestNewRouter(t *testing.T) {
 	// Test that NewRouter creates a valid Gin router
 	router := NewRouter()
 	assert.NotNil(t, router)
-	
+
 	// Test that routes are registered
 	routes := router.Routes()
 	assert.NotEmpty(t, routes)
-	
+
 	// Check for some expected routes
 	routePaths := make(map[string]bool)
 	for _, route := range routes {
 		routePaths[route.Path] = true
 	}
-	
+
 	// Should have health check route
 	assert.True(t, routePaths["/health"] || routePaths["/api/health"])
 }
@@ -265,7 +301,7 @@ func TestInit_RouterCreation(t *testing.T) {
 	os.Setenv("DB_USERNAME", "test_user")
 	os.Setenv("DB_PASSWORD", "test_pass")
 	os.Setenv("DB_RUN_MIGRATIONS", "false")
-	
+
 	defer func() {
 		os.Unsetenv("GO_ENV")
 		os.Unsetenv("API_PORT")
@@ -291,45 +327,48 @@ func TestInit_ConfigValidation(t *testing.T) {
 		{
 			name: "Valid production config",
 			envVars: map[string]string{
-				"GO_ENV":              "production",
-				"API_HOST":            "0.0.0.0",
-				"API_PORT":            "8080",
-				"DB_HOST":             "localhost",
-				"DB_PORT":             "5432",
-				"DB_NAME":             "orders_db",
-				"DB_USERNAME":         "orders_user",
-				"DB_PASSWORD":         "secure_password",
-				"DB_RUN_MIGRATIONS":   "true",
+				"GO_ENV":            "production",
+				"API_HOST":          "0.0.0.0",
+				"API_PORT":          "8080",
+				"API_GATEWAY_URL":   "http://localhost:8081",
+				"DB_HOST":           "localhost",
+				"DB_PORT":           "5432",
+				"DB_NAME":           "orders_db",
+				"DB_USERNAME":       "orders_user",
+				"DB_PASSWORD":       "secure_password",
+				"DB_RUN_MIGRATIONS": "true",
 			},
 			expected: true,
 		},
 		{
 			name: "Valid development config",
 			envVars: map[string]string{
-				"GO_ENV":              "development",
-				"API_HOST":            "localhost",
-				"API_PORT":            "3000",
-				"DB_HOST":             "localhost",
-				"DB_PORT":             "5432",
-				"DB_NAME":             "orders_dev",
-				"DB_USERNAME":         "dev_user",
-				"DB_PASSWORD":         "dev_pass",
-				"DB_RUN_MIGRATIONS":   "false",
+				"GO_ENV":            "development",
+				"API_HOST":          "localhost",
+				"API_PORT":          "3000",
+				"API_GATEWAY_URL":   "http://localhost:8081",
+				"DB_HOST":           "localhost",
+				"DB_PORT":           "5432",
+				"DB_NAME":           "orders_dev",
+				"DB_USERNAME":       "dev_user",
+				"DB_PASSWORD":       "dev_pass",
+				"DB_RUN_MIGRATIONS": "false",
 			},
 			expected: true,
 		},
 		{
 			name: "Valid test config",
 			envVars: map[string]string{
-				"GO_ENV":              "test",
-				"API_HOST":            "localhost",
-				"API_PORT":            "0",
-				"DB_HOST":             "localhost",
-				"DB_PORT":             "5432",
-				"DB_NAME":             "orders_test",
-				"DB_USERNAME":         "test_user",
-				"DB_PASSWORD":         "test_pass",
-				"DB_RUN_MIGRATIONS":   "false",
+				"GO_ENV":            "test",
+				"API_HOST":          "localhost",
+				"API_PORT":          "0",
+				"API_GATEWAY_URL":   "http://localhost:8081",
+				"DB_HOST":           "localhost",
+				"DB_PORT":           "5432",
+				"DB_NAME":           "orders_test",
+				"DB_USERNAME":       "test_user",
+				"DB_PASSWORD":       "test_pass",
+				"DB_RUN_MIGRATIONS": "false",
 			},
 			expected: true,
 		},
@@ -341,7 +380,7 @@ func TestInit_ConfigValidation(t *testing.T) {
 			for key, value := range tc.envVars {
 				os.Setenv(key, value)
 			}
-			
+
 			defer func() {
 				// Clean up environment variables
 				for key := range tc.envVars {
@@ -352,7 +391,7 @@ func TestInit_ConfigValidation(t *testing.T) {
 			// Load config and validate
 			cfg := config.LoadConfig()
 			assert.NotNil(t, cfg)
-			
+
 			if tc.expected {
 				assert.NotEmpty(t, cfg.APIHost)
 				assert.NotEmpty(t, cfg.APIPort)
@@ -370,16 +409,16 @@ func TestInit_ContextHandling(t *testing.T) {
 	// Test context creation and handling
 	ctx := context.Background()
 	assert.NotNil(t, ctx)
-	
+
 	// Test context with timeout
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	assert.NotNil(t, ctx)
-	
+
 	// Test context cancellation
 	ctx, cancel = context.WithCancel(context.Background())
 	cancel()
-	
+
 	select {
 	case <-ctx.Done():
 		assert.Equal(t, context.Canceled, ctx.Err())

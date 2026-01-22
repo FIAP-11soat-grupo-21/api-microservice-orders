@@ -18,7 +18,7 @@ clean:
 	rm -f coverage.out coverage.html
 
 dev-up:
-	docker-compose -f ../.devcontainer/docker-compose.yml up -d postgres rabbitmq
+	docker-compose -f ../.devcontainer/docker-compose.yml up -d
 
 dev-down:
 	docker-compose -f ../.devcontainer/docker-compose.yml down

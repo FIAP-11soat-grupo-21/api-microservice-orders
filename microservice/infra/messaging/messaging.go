@@ -19,16 +19,22 @@ func Connect() error {
 
 	brokerConfig := brokers.BrokerConfig{
 		Type: cfg.MessageBroker.Type,
+		//AWS
+		AWSRegion:          cfg.AWS.Region,
+		AWSEndpoint:        cfg.AWS.Endpoint,
+		AWSAccessKey:       cfg.AWS.AccessKeyID,
+		AWSSecretAccessKey: cfg.AWS.SecretAccessKey,
 		// SQS
-		SQSOrdersQueueURL: cfg.MessageBroker.SQS.OrdersQueueURL,
-		AWSRegion:         cfg.MessageBroker.SQS.AWSRegion,
-		// RabbitMQ
-		RabbitMQURL:         buildRabbitMQURL(cfg),
-		RabbitMQOrdersQueue: cfg.MessageBroker.RabbitMQ.OrdersQueue,
+		SQSUpdateOrderStatusQueueURL: cfg.MessageBroker.SQS.UpdateOrderStatusQueueURL,
+		SQSOrderErrorQueueURL:        cfg.MessageBroker.SQS.OrderErrorQueueURL,
+		// SNS
+		SNSOrderErrorTopicARN:   cfg.MessageBroker.SNS.OrderErrorTopicARN,
+		SNSOrderCreatedTopicARN: cfg.MessageBroker.SNS.OrderCreatedTopicARN,
 	}
 
 	if cfg.MessageBroker.Type == "sqs" {
-		log.Printf("SQS Config - Orders Queue: %s", brokerConfig.SQSOrdersQueueURL)
+		log.Printf("SQS Config - Update Order Status Queue: %s", brokerConfig.SQSUpdateOrderStatusQueueURL)
+		log.Printf("SQS Config - Order Error Queue: %s", brokerConfig.SQSOrderErrorQueueURL)
 		log.Printf("SQS Config - AWS Region: %s", brokerConfig.AWSRegion)
 	}
 
@@ -46,10 +52,6 @@ func Connect() error {
 
 func GetBroker() brokers.MessageBroker {
 	return broker
-}
-
-func buildRabbitMQURL(cfg *config.Config) string {
-	return cfg.MessageBroker.RabbitMQ.URL
 }
 
 func Close() {

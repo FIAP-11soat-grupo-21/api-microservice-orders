@@ -9,9 +9,10 @@ import (
 )
 
 type Config struct {
-	GoEnv   string
-	APIPort string
-	APIHost string
+	GoEnv         string
+	APIPort       string
+	APIHost       string
+	APIGatewayURL string
 
 	Database struct {
 		RunMigrations bool
@@ -22,19 +23,25 @@ type Config struct {
 		Password      string
 	}
 
+	AWS struct {
+		Endpoint        string
+		Region          string
+		AccessKeyID     string
+		SecretAccessKey string
+	}
+
 	MessageBroker struct {
-		Type string // "sqs" ou "rabbitmq"
+		Type string // "sqs"
 
 		// SQS
 		SQS struct {
-			OrdersQueueURL string
-			AWSRegion      string
+			UpdateOrderStatusQueueURL string
+			OrderErrorQueueURL        string
 		}
 
-		// RabbitMQ
-		RabbitMQ struct {
-			URL         string // (ex: amqp://user:pass@host:port/)
-			OrdersQueue string
+		SNS struct {
+			OrderErrorTopicARN   string
+			OrderCreatedTopicARN string
 		}
 	}
 }
@@ -72,7 +79,9 @@ func (c *Config) Load() *Config {
 	c.GoEnv = getEnv("GO_ENV")
 	c.APIPort = getEnv("API_PORT")
 	c.APIHost = getEnv("API_HOST")
+	c.APIGatewayURL = getEnv("API_GATEWAY_URL", "")
 
+	// Database Configuration
 	c.Database.RunMigrations = getEnv("DB_RUN_MIGRATIONS") == "true"
 	c.Database.Host = getEnv("DB_HOST")
 	c.Database.Name = getEnv("DB_NAME")
@@ -80,16 +89,22 @@ func (c *Config) Load() *Config {
 	c.Database.Username = getEnv("DB_USERNAME")
 	c.Database.Password = getEnv("DB_PASSWORD")
 
+	// AWS Configuration
+	c.AWS.Endpoint = getEnv("AWS_ENDPOINT", "")
+	c.AWS.Region = getEnv("AWS_REGION", "us-east-2")
+	c.AWS.AccessKeyID = getEnv("AWS_ACCESS_KEY_ID", "")
+	c.AWS.SecretAccessKey = getEnv("AWS_SECRET_ACCESS_KEY", "")
+
 	// Message Broker Configuration
 	c.MessageBroker.Type = getEnv("MESSAGE_BROKER_TYPE", "sqs")
 
 	// SQS
-	c.MessageBroker.SQS.OrdersQueueURL = getEnv("SQS_ORDERS_QUEUE_URL", "")
-	c.MessageBroker.SQS.AWSRegion = getEnv("AWS_REGION", "us-east-2")
+	c.MessageBroker.SQS.UpdateOrderStatusQueueURL = getEnv("SQS_UPDATE_ORDER_STATUS_QUEUE_URL", "")
+	c.MessageBroker.SQS.OrderErrorQueueURL = getEnv("SQS_ORDER_ERROR_QUEUE_URL", "")
 
-	// RabbitMQ
-	c.MessageBroker.RabbitMQ.URL = getEnv("RABBITMQ_URL", "amqp://guest:guest@localhost:5672/")
-	c.MessageBroker.RabbitMQ.OrdersQueue = getEnv("RABBITMQ_ORDERS_QUEUE", "orders.updates")
+	// SNS
+	c.MessageBroker.SNS.OrderErrorTopicARN = getEnv("SNS_ORDER_ERROR_TOPIC_ARN", "")
+	c.MessageBroker.SNS.OrderCreatedTopicARN = getEnv("SNS_ORDER_CREATED_TOPIC_ARN", "")
 
 	return c
 }

@@ -38,3 +38,12 @@ func NewOrderItem(id string, productID string, orderID string, quantity int, uni
 func (oi *OrderItem) GetTotal() float64 {
 	return oi.UnitPrice.Value() * float64(oi.Quantity.Value())
 }
+
+func (oi *OrderItem) ToMap() map[string]interface{} {
+	return map[string]interface{}{
+		"id":         oi.ID,
+		"product_id": oi.ProductID.Value(),
+		"quantity":   oi.Quantity.Value(),
+		"unit_price": oi.UnitPrice.Value(),
+	}
+}
