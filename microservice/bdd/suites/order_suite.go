@@ -4,7 +4,6 @@ import (
 	"context"
 	"microservice/bdd/steps"
 	"microservice/mocks"
-	"os"
 
 	"github.com/cucumber/godog"
 	"github.com/golang/mock/gomock"
@@ -22,8 +21,7 @@ func InitializeScenario(ctx *godog.ScenarioContext) {
 
 	ctx.Before(func(ctx context.Context, sc *godog.Scenario) (context.Context, error) {
 		// Setup environment variables
-		os.Setenv("API_GATEWAY_URL", "http://localhost:8081")
-		os.Setenv("SNS_ORDER_CREATED_TOPIC_ARN", "arn:aws:sns:us-east-1:123456789012:order-created")
+		mocks.SetupEnv()
 
 		ctrl := gomock.NewController(&godogReporter{})
 
@@ -48,8 +46,7 @@ func InitializeScenario(ctx *godog.ScenarioContext) {
 			helper.Ctrl.Finish()
 		}
 		// Cleanup environment variables
-		os.Unsetenv("API_GATEWAY_URL")
-		os.Unsetenv("SNS_ORDER_CREATED_TOPIC_ARN")
+		mocks.CleanupEnv()
 		return ctx, nil
 	})
 

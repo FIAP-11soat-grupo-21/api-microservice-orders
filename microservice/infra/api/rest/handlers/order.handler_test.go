@@ -18,6 +18,7 @@ import (
 	"microservice/internal/adapters/daos"
 	"microservice/internal/adapters/dtos"
 	"microservice/internal/interfaces"
+	"microservice/mocks"
 	"microservice/utils/factories"
 )
 
@@ -171,6 +172,9 @@ func TestNewOrderHandler(t *testing.T) {
 }
 
 func TestOrderHandler_Create_Success(t *testing.T) {
+	mocks.SetupEnv()
+	defer mocks.CleanupEnv()
+
 	orderDS := &mockOrderDS{
 		createFunc: func(order daos.OrderDAO) error {
 			return nil
