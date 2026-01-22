@@ -16,6 +16,7 @@ func TestInit_ProductionMode(t *testing.T) {
 	os.Setenv("GO_ENV", "production")
 	os.Setenv("API_HOST", "0.0.0.0")
 	os.Setenv("API_PORT", "8080")
+	os.Setenv("API_GATEWAY_URL", "http://localhost:8081")
 	os.Setenv("DB_HOST", "localhost")
 	os.Setenv("DB_PORT", "5432")
 	os.Setenv("DB_NAME", "test_db")
@@ -28,6 +29,7 @@ func TestInit_ProductionMode(t *testing.T) {
 		os.Unsetenv("GO_ENV")
 		os.Unsetenv("API_HOST")
 		os.Unsetenv("API_PORT")
+		os.Unsetenv("API_GATEWAY_URL")
 		os.Unsetenv("DB_HOST")
 		os.Unsetenv("DB_PORT")
 		os.Unsetenv("DB_NAME")
@@ -48,6 +50,7 @@ func TestInit_DevelopmentMode(t *testing.T) {
 	os.Setenv("GO_ENV", "development")
 	os.Setenv("API_HOST", "localhost")
 	os.Setenv("API_PORT", "3000")
+	os.Setenv("API_GATEWAY_URL", "http://localhost:8081")
 	os.Setenv("DB_HOST", "localhost")
 	os.Setenv("DB_PORT", "5432")
 	os.Setenv("DB_NAME", "test_db")
@@ -60,6 +63,7 @@ func TestInit_DevelopmentMode(t *testing.T) {
 		os.Unsetenv("GO_ENV")
 		os.Unsetenv("API_HOST")
 		os.Unsetenv("API_PORT")
+		os.Unsetenv("API_GATEWAY_URL")
 		os.Unsetenv("DB_HOST")
 		os.Unsetenv("DB_PORT")
 		os.Unsetenv("DB_NAME")
@@ -81,6 +85,7 @@ func TestInit_WithMigrations(t *testing.T) {
 	os.Setenv("GO_ENV", "development")
 	os.Setenv("API_HOST", "localhost")
 	os.Setenv("API_PORT", "3000")
+	os.Setenv("API_GATEWAY_URL", "http://localhost:8081")
 	os.Setenv("DB_HOST", "localhost")
 	os.Setenv("DB_PORT", "5432")
 	os.Setenv("DB_NAME", "test_db")
@@ -92,6 +97,7 @@ func TestInit_WithMigrations(t *testing.T) {
 		// Clean up environment variables
 		os.Unsetenv("GO_ENV")
 		os.Unsetenv("API_HOST")
+		os.Unsetenv("API_GATEWAY_URL")
 		os.Unsetenv("API_PORT")
 		os.Unsetenv("DB_HOST")
 		os.Unsetenv("DB_PORT")
@@ -112,6 +118,7 @@ func TestInit_WithoutMigrations(t *testing.T) {
 	os.Setenv("GO_ENV", "development")
 	os.Setenv("API_HOST", "localhost")
 	os.Setenv("API_PORT", "3000")
+	os.Setenv("API_GATEWAY_URL", "http://localhost:8081")
 	os.Setenv("DB_HOST", "localhost")
 	os.Setenv("DB_PORT", "5432")
 	os.Setenv("DB_NAME", "test_db")
@@ -124,6 +131,7 @@ func TestInit_WithoutMigrations(t *testing.T) {
 		os.Unsetenv("GO_ENV")
 		os.Unsetenv("API_HOST")
 		os.Unsetenv("API_PORT")
+		os.Unsetenv("API_GATEWAY_URL")
 		os.Unsetenv("DB_HOST")
 		os.Unsetenv("DB_PORT")
 		os.Unsetenv("DB_NAME")
@@ -142,6 +150,7 @@ func TestInit_MessageBrokerConfiguration(t *testing.T) {
 	os.Setenv("GO_ENV", "development")
 	os.Setenv("API_HOST", "localhost")
 	os.Setenv("API_PORT", "3000")
+	os.Setenv("API_GATEWAY_URL", "http://localhost:8081")
 	os.Setenv("DB_HOST", "localhost")
 	os.Setenv("DB_PORT", "5432")
 	os.Setenv("DB_NAME", "test_db")
@@ -163,6 +172,7 @@ func TestInit_MessageBrokerConfiguration(t *testing.T) {
 		os.Unsetenv("GO_ENV")
 		os.Unsetenv("API_HOST")
 		os.Unsetenv("API_PORT")
+		os.Unsetenv("API_GATEWAY_URL")
 		os.Unsetenv("DB_HOST")
 		os.Unsetenv("DB_PORT")
 		os.Unsetenv("DB_NAME")
@@ -191,6 +201,7 @@ func TestInit_SQSConfiguration(t *testing.T) {
 	os.Setenv("GO_ENV", "development")
 	os.Setenv("API_HOST", "localhost")
 	os.Setenv("API_PORT", "3000")
+	os.Setenv("API_GATEWAY_URL", "http://localhost:8081")
 	os.Setenv("DB_HOST", "localhost")
 	os.Setenv("DB_PORT", "5432")
 	os.Setenv("DB_NAME", "test_db")
@@ -212,6 +223,7 @@ func TestInit_SQSConfiguration(t *testing.T) {
 		os.Unsetenv("GO_ENV")
 		os.Unsetenv("API_HOST")
 		os.Unsetenv("API_PORT")
+		os.Unsetenv("API_GATEWAY_URL")
 		os.Unsetenv("DB_HOST")
 		os.Unsetenv("DB_PORT")
 		os.Unsetenv("DB_NAME")
@@ -238,7 +250,7 @@ func TestInit_SQSConfiguration(t *testing.T) {
 func TestInit_DefaultConfiguration(t *testing.T) {
 	// Clear all environment variables to test defaults
 	envVars := []string{
-		"GO_ENV", "API_PORT", "API_HOST", "DB_RUN_MIGRATIONS",
+		"GO_ENV", "API_PORT", "API_HOST", "API_GATEWAY_URL", "DB_RUN_MIGRATIONS",
 		"DB_HOST", "DB_NAME", "DB_PORT", "DB_USERNAME", "DB_PASSWORD",
 		"MESSAGE_BROKER_TYPE", "SQS_UPDATE_ORDER_STATUS_QUEUE_URL", "SQS_ORDER_ERROR_QUEUE_URL", "AWS_REGION",
 		"AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_ENDPOINT",
@@ -318,6 +330,7 @@ func TestInit_ConfigValidation(t *testing.T) {
 				"GO_ENV":            "production",
 				"API_HOST":          "0.0.0.0",
 				"API_PORT":          "8080",
+				"API_GATEWAY_URL":   "http://localhost:8081",
 				"DB_HOST":           "localhost",
 				"DB_PORT":           "5432",
 				"DB_NAME":           "orders_db",
@@ -333,6 +346,7 @@ func TestInit_ConfigValidation(t *testing.T) {
 				"GO_ENV":            "development",
 				"API_HOST":          "localhost",
 				"API_PORT":          "3000",
+				"API_GATEWAY_URL":   "http://localhost:8081",
 				"DB_HOST":           "localhost",
 				"DB_PORT":           "5432",
 				"DB_NAME":           "orders_dev",
@@ -348,6 +362,7 @@ func TestInit_ConfigValidation(t *testing.T) {
 				"GO_ENV":            "test",
 				"API_HOST":          "localhost",
 				"API_PORT":          "0",
+				"API_GATEWAY_URL":   "http://localhost:8081",
 				"DB_HOST":           "localhost",
 				"DB_PORT":           "5432",
 				"DB_NAME":           "orders_test",

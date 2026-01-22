@@ -25,7 +25,6 @@ type CreateOrderDTO struct {
 type CreateOrderItemDTO struct {
 	ProductID string
 	Quantity  int
-	Price     float64
 }
 
 type UpdateOrderDTO struct {

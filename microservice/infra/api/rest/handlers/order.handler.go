@@ -51,7 +51,6 @@ func (h *OrderHandler) Create(ctx *gin.Context) {
 		items[i] = dtos.CreateOrderItemDTO{
 			ProductID: item.ProductID,
 			Quantity:  item.Quantity,
-			Price:     item.Price,
 		}
 	}
 

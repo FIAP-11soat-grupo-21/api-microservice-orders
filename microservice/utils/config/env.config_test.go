@@ -1,13 +1,14 @@
 package config
 
 import (
+	"microservice/mocks"
 	"os"
 	"testing"
 )
 
 func TestLoadConfig_Singleton(t *testing.T) {
-	setupTestEnv()
-	defer cleanupTestEnv()
+	mocks.SetupEnv()
+	defer mocks.CleanupEnv()
 
 	// Reset singleton for testing
 	instance = nil
@@ -22,8 +23,8 @@ func TestLoadConfig_Singleton(t *testing.T) {
 }
 
 func TestConfig_Load_Success(t *testing.T) {
-	setupTestEnv()
-	defer cleanupTestEnv()
+	mocks.SetupEnv()
+	defer mocks.CleanupEnv()
 
 	config := &Config{}
 	result := config.Load()
@@ -60,8 +61,8 @@ func TestConfig_Environment(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			setupTestEnv()
-			defer cleanupTestEnv()
+			mocks.SetupEnv()
+			defer mocks.CleanupEnv()
 
 			os.Setenv("GO_ENV", tt.env)
 
@@ -80,8 +81,8 @@ func TestConfig_Environment(t *testing.T) {
 }
 
 func TestConfig_Database(t *testing.T) {
-	setupTestEnv()
-	defer cleanupTestEnv()
+	mocks.SetupEnv()
+	defer mocks.CleanupEnv()
 
 	dbEnvVars := map[string]string{
 		"DB_RUN_MIGRATIONS": "true",
@@ -125,8 +126,8 @@ func TestConfig_Database(t *testing.T) {
 }
 
 func TestConfig_Database_RunMigrations_False(t *testing.T) {
-	setupTestEnv()
-	defer cleanupTestEnv()
+	mocks.SetupEnv()
+	defer mocks.CleanupEnv()
 
 	os.Setenv("DB_RUN_MIGRATIONS", "false")
 
@@ -139,8 +140,8 @@ func TestConfig_Database_RunMigrations_False(t *testing.T) {
 }
 
 func TestConfig_MessageBroker_SQS(t *testing.T) {
-	setupTestEnv()
-	defer cleanupTestEnv()
+	mocks.SetupEnv()
+	defer mocks.CleanupEnv()
 
 	sqsEnvVars := map[string]string{
 		"MESSAGE_BROKER_TYPE":               "sqs",
@@ -169,8 +170,8 @@ func TestConfig_MessageBroker_SQS(t *testing.T) {
 }
 
 func TestConfig_MessageBroker_Defaults(t *testing.T) {
-	setupTestEnv()
-	defer cleanupTestEnv()
+	mocks.SetupEnv()
+	defer mocks.CleanupEnv()
 
 	// Remove MESSAGE_BROKER_TYPE to test default
 	os.Unsetenv("MESSAGE_BROKER_TYPE")
@@ -193,8 +194,8 @@ func TestConfig_MessageBroker_Defaults(t *testing.T) {
 }
 
 func TestConfig_API_Configuration(t *testing.T) {
-	setupTestEnv()
-	defer cleanupTestEnv()
+	mocks.SetupEnv()
+	defer mocks.CleanupEnv()
 
 	apiEnvVars := map[string]string{
 		"API_PORT": "3000",
@@ -218,8 +219,8 @@ func TestConfig_API_Configuration(t *testing.T) {
 }
 
 func TestConfig_AllFields(t *testing.T) {
-	setupTestEnv()
-	defer cleanupTestEnv()
+	mocks.SetupEnv()
+	defer mocks.CleanupEnv()
 
 	allEnvVars := map[string]string{
 		"GO_ENV":                            "production",
@@ -346,47 +347,5 @@ func TestConfig_Structure(t *testing.T) {
 
 	if config.MessageBroker.SQS.UpdateOrderStatusQueueURL == "" && config.MessageBroker.SQS.UpdateOrderStatusQueueURL != "" {
 		t.Error("Config.MessageBroker.SQS.UpdateOrderStatusQueueURL field missing")
-	}
-}
-
-// Helper functions
-func setupTestEnv() {
-	defaultEnvVars := map[string]string{
-		"GO_ENV":                            "test",
-		"API_PORT":                          "8080",
-		"API_HOST":                          "localhost",
-		"DB_RUN_MIGRATIONS":                 "false",
-		"DB_HOST":                           "localhost",
-		"DB_NAME":                           "test_db",
-		"DB_PORT":                           "5432",
-		"DB_USERNAME":                       "test_user",
-		"DB_PASSWORD":                       "test_pass",
-		"MESSAGE_BROKER_TYPE":               "sqs",
-		"AWS_REGION":                        "us-west-2",
-		"AWS_ACCESS_KEY_ID":                 "test",
-		"AWS_SECRET_ACCESS_KEY":             "test",
-		"AWS_ENDPOINT":                      "http://localhost:4566",
-		"SQS_UPDATE_ORDER_STATUS_QUEUE_URL": "http://localhost:4566/000000000000/update-order-status-queue",
-		"SQS_ORDER_ERROR_QUEUE_URL":         "http://localhost:4566/000000000000/order-error-queue",
-		"SNS_ORDER_ERROR_TOPIC_ARN":         "arn:aws:sns:us-west-2:000000000000:order-error-topic",
-		"SNS_ORDER_CREATED_TOPIC_ARN":       "arn:aws:sns:us-west-2:000000000000:order-created-topic",
-	}
-
-	for key, value := range defaultEnvVars {
-		os.Setenv(key, value)
-	}
-}
-
-func cleanupTestEnv() {
-	envVars := []string{
-		"GO_ENV", "API_PORT", "API_HOST", "DB_RUN_MIGRATIONS",
-		"DB_HOST", "DB_NAME", "DB_PORT", "DB_USERNAME", "DB_PASSWORD",
-		"MESSAGE_BROKER_TYPE", "SQS_UPDATE_ORDER_STATUS_QUEUE_URL", "SQS_ORDER_ERROR_QUEUE_URL", "AWS_REGION",
-		"AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_ENDPOINT",
-		"SNS_ORDER_ERROR_TOPIC_ARN", "SNS_ORDER_CREATED_TOPIC_ARN",
-	}
-
-	for _, envVar := range envVars {
-		os.Unsetenv(envVar)
 	}
 }

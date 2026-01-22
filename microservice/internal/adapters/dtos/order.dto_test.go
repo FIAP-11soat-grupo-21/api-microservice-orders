@@ -53,7 +53,6 @@ func TestCreateOrderDTO_Structure(t *testing.T) {
 			{
 				ProductID: "product-1",
 				Quantity:  2,
-				Price:     15.99,
 			},
 		},
 	}
@@ -62,19 +61,16 @@ func TestCreateOrderDTO_Structure(t *testing.T) {
 	assert.Len(t, createOrderDTO.Items, 1)
 	assert.Equal(t, "product-1", createOrderDTO.Items[0].ProductID)
 	assert.Equal(t, 2, createOrderDTO.Items[0].Quantity)
-	assert.Equal(t, 15.99, createOrderDTO.Items[0].Price)
 }
 
 func TestCreateOrderItemDTO_Structure(t *testing.T) {
 	createItemDTO := CreateOrderItemDTO{
 		ProductID: "product-456",
 		Quantity:  5,
-		Price:     12.50,
 	}
 
 	assert.Equal(t, "product-456", createItemDTO.ProductID)
 	assert.Equal(t, 5, createItemDTO.Quantity)
-	assert.Equal(t, 12.50, createItemDTO.Price)
 }
 
 func TestUpdateOrderDTO_Structure(t *testing.T) {
@@ -178,12 +174,10 @@ func TestCreateOrderDTO_WithMultipleItems(t *testing.T) {
 		{
 			ProductID: "product-1",
 			Quantity:  1,
-			Price:     10.00,
 		},
 		{
 			ProductID: "product-2",
 			Quantity:  2,
-			Price:     15.00,
 		},
 	}
 
@@ -205,7 +199,6 @@ func TestCreateOrderDTO_WithNilCustomer(t *testing.T) {
 			{
 				ProductID: "product-1",
 				Quantity:  1,
-				Price:     10.00,
 			},
 		},
 	}

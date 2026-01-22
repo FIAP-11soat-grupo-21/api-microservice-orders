@@ -3,9 +3,11 @@ package controllers
 import (
 	"context"
 	"errors"
+	"microservice/infra/api/client"
 	"microservice/internal/adapters/brokers"
 	"microservice/internal/adapters/daos"
 	"microservice/internal/adapters/dtos"
+	"microservice/mocks"
 	"testing"
 	"time"
 
@@ -86,12 +88,22 @@ func (m *MockMessageBroker) Close() error {
 	return args.Error(0)
 }
 
+type mockApiClient struct {
+	mock.Mock
+}
+
+func (m *mockApiClient) Get(path string, obj any) error {
+	args := m.Called(path, obj)
+	return args.Error(0)
+}
+
 func TestNewOrderController(t *testing.T) {
 	mockOrderDS := &MockOrderDataSource{}
 	mockOrderStatusDS := &MockOrderStatusDataSource{}
 	mockBroker := &MockMessageBroker{}
+	mockAC := &mockApiClient{}
 
-	controller := NewOrderController(mockOrderDS, mockOrderStatusDS, mockBroker)
+	controller := NewOrderController(mockOrderDS, mockOrderStatusDS, mockBroker, mockAC)
 
 	assert.NotNil(t, controller)
 	assert.Equal(t, mockOrderDS, controller.orderDataSource)
@@ -102,11 +114,15 @@ func TestNewOrderController(t *testing.T) {
 }
 
 func TestOrderController_Create_Success(t *testing.T) {
+	mocks.SetupEnv()
+	defer mocks.CleanupEnv()
+
 	mockOrderDS := &MockOrderDataSource{}
 	mockOrderStatusDS := &MockOrderStatusDataSource{}
 	mockBroker := &MockMessageBroker{}
+	mockAC := &mockApiClient{}
 
-	controller := NewOrderController(mockOrderDS, mockOrderStatusDS, mockBroker)
+	controller := NewOrderController(mockOrderDS, mockOrderStatusDS, mockBroker, mockAC)
 
 	customerID := "customer-123"
 	createDTO := dtos.CreateOrderDTO{
@@ -115,10 +131,16 @@ func TestOrderController_Create_Success(t *testing.T) {
 			{
 				ProductID: "product-1",
 				Quantity:  2,
-				Price:     10.50,
 			},
 		},
 	}
+
+	mockAC.On("Get", "/products/product-1", mock.Anything).Run(func(args mock.Arguments) {
+		response := args.Get(1).(*client.ProductResponseDTO)
+		response.ID = "product-1"
+		response.Price = 10.50
+		response.Active = true
+	}).Return(nil)
 
 	// Mock expectations
 	mockOrderStatusDS.On("FindByID", "56d3b3c3-1801-49cd-bae7-972c78082012").Return(daos.OrderStatusDAO{
@@ -147,8 +169,9 @@ func TestOrderController_Create_Error(t *testing.T) {
 	mockOrderDS := &MockOrderDataSource{}
 	mockOrderStatusDS := &MockOrderStatusDataSource{}
 	mockBroker := &MockMessageBroker{}
+	mockAC := &mockApiClient{}
 
-	controller := NewOrderController(mockOrderDS, mockOrderStatusDS, mockBroker)
+	controller := NewOrderController(mockOrderDS, mockOrderStatusDS, mockBroker, mockAC)
 
 	customerID := "customer-123"
 	createDTO := dtos.CreateOrderDTO{
@@ -157,7 +180,6 @@ func TestOrderController_Create_Error(t *testing.T) {
 			{
 				ProductID: "product-1",
 				Quantity:  2,
-				Price:     10.50,
 			},
 		},
 	}
@@ -178,8 +200,9 @@ func TestOrderController_FindAll_Success(t *testing.T) {
 	mockOrderDS := &MockOrderDataSource{}
 	mockOrderStatusDS := &MockOrderStatusDataSource{}
 	mockBroker := &MockMessageBroker{}
+	mockAC := &mockApiClient{}
 
-	controller := NewOrderController(mockOrderDS, mockOrderStatusDS, mockBroker)
+	controller := NewOrderController(mockOrderDS, mockOrderStatusDS, mockBroker, mockAC)
 
 	filter := dtos.OrderFilterDTO{}
 	now := time.Now()
@@ -224,8 +247,9 @@ func TestOrderController_FindAll_Error(t *testing.T) {
 	mockOrderDS := &MockOrderDataSource{}
 	mockOrderStatusDS := &MockOrderStatusDataSource{}
 	mockBroker := &MockMessageBroker{}
+	mockAC := &mockApiClient{}
 
-	controller := NewOrderController(mockOrderDS, mockOrderStatusDS, mockBroker)
+	controller := NewOrderController(mockOrderDS, mockOrderStatusDS, mockBroker, mockAC)
 
 	filter := dtos.OrderFilterDTO{}
 
@@ -244,8 +268,9 @@ func TestOrderController_FindByID_Success(t *testing.T) {
 	mockOrderDS := &MockOrderDataSource{}
 	mockOrderStatusDS := &MockOrderStatusDataSource{}
 	mockBroker := &MockMessageBroker{}
+	mockAC := &mockApiClient{}
 
-	controller := NewOrderController(mockOrderDS, mockOrderStatusDS, mockBroker)
+	controller := NewOrderController(mockOrderDS, mockOrderStatusDS, mockBroker, mockAC)
 
 	orderID := "550e8400-e29b-41d4-a716-446655440000" // Valid UUID
 	now := time.Now()
@@ -287,8 +312,9 @@ func TestOrderController_FindByID_Error(t *testing.T) {
 	mockOrderDS := &MockOrderDataSource{}
 	mockOrderStatusDS := &MockOrderStatusDataSource{}
 	mockBroker := &MockMessageBroker{}
+	mockAC := &mockApiClient{}
 
-	controller := NewOrderController(mockOrderDS, mockOrderStatusDS, mockBroker)
+	controller := NewOrderController(mockOrderDS, mockOrderStatusDS, mockBroker, mockAC)
 
 	orderID := "invalid-order-id" // Invalid UUID
 
@@ -303,8 +329,9 @@ func TestOrderController_Update_Success(t *testing.T) {
 	mockOrderDS := &MockOrderDataSource{}
 	mockOrderStatusDS := &MockOrderStatusDataSource{}
 	mockBroker := &MockMessageBroker{}
+	mockAC := &mockApiClient{}
 
-	controller := NewOrderController(mockOrderDS, mockOrderStatusDS, mockBroker)
+	controller := NewOrderController(mockOrderDS, mockOrderStatusDS, mockBroker, mockAC)
 
 	updateDTO := dtos.UpdateOrderDTO{
 		ID:       "550e8400-e29b-41d4-a716-446655440000", // Valid UUID
@@ -345,8 +372,9 @@ func TestOrderController_UpdateStatus_Success(t *testing.T) {
 	mockOrderDS := &MockOrderDataSource{}
 	mockOrderStatusDS := &MockOrderStatusDataSource{}
 	mockBroker := &MockMessageBroker{}
+	mockAC := &mockApiClient{}
 
-	controller := NewOrderController(mockOrderDS, mockOrderStatusDS, mockBroker)
+	controller := NewOrderController(mockOrderDS, mockOrderStatusDS, mockBroker, mockAC)
 
 	updateDTO := dtos.UpdateOrderStatusDTO{
 		OrderID: "550e8400-e29b-41d4-a716-446655440000", // Valid UUID
@@ -387,8 +415,9 @@ func TestOrderController_Delete_Success(t *testing.T) {
 	mockOrderDS := &MockOrderDataSource{}
 	mockOrderStatusDS := &MockOrderStatusDataSource{}
 	mockBroker := &MockMessageBroker{}
+	mockAC := &mockApiClient{}
 
-	controller := NewOrderController(mockOrderDS, mockOrderStatusDS, mockBroker)
+	controller := NewOrderController(mockOrderDS, mockOrderStatusDS, mockBroker, mockAC)
 
 	orderID := "550e8400-e29b-41d4-a716-446655440000" // Valid UUID
 	now := time.Now()
@@ -427,8 +456,9 @@ func TestOrderController_Delete_Error(t *testing.T) {
 	mockOrderDS := &MockOrderDataSource{}
 	mockOrderStatusDS := &MockOrderStatusDataSource{}
 	mockBroker := &MockMessageBroker{}
+	mockAC := &mockApiClient{}
 
-	controller := NewOrderController(mockOrderDS, mockOrderStatusDS, mockBroker)
+	controller := NewOrderController(mockOrderDS, mockOrderStatusDS, mockBroker, mockAC)
 
 	orderID := "invalid-order-id" // Invalid UUID
 
@@ -442,8 +472,9 @@ func TestOrderController_FindAllStatus_Success(t *testing.T) {
 	mockOrderDS := &MockOrderDataSource{}
 	mockOrderStatusDS := &MockOrderStatusDataSource{}
 	mockBroker := &MockMessageBroker{}
+	mockAC := &mockApiClient{}
 
-	controller := NewOrderController(mockOrderDS, mockOrderStatusDS, mockBroker)
+	controller := NewOrderController(mockOrderDS, mockOrderStatusDS, mockBroker, mockAC)
 
 	mockStatuses := []daos.OrderStatusDAO{
 		{ID: "status-1", Name: "PENDING"},
@@ -468,8 +499,9 @@ func TestOrderController_FindAllStatus_Error(t *testing.T) {
 	mockOrderDS := &MockOrderDataSource{}
 	mockOrderStatusDS := &MockOrderStatusDataSource{}
 	mockBroker := &MockMessageBroker{}
+	mockAC := &mockApiClient{}
 
-	controller := NewOrderController(mockOrderDS, mockOrderStatusDS, mockBroker)
+	controller := NewOrderController(mockOrderDS, mockOrderStatusDS, mockBroker, mockAC)
 
 	mockOrderStatusDS.On("FindAll").Return([]daos.OrderStatusDAO{}, errors.New("database error"))
 

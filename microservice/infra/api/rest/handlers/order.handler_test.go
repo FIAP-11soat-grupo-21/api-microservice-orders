@@ -12,6 +12,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"microservice/infra/api/client"
 	"microservice/infra/api/rest/schemas"
 	"microservice/internal/adapters/brokers"
 	"microservice/internal/adapters/daos"
@@ -116,7 +117,24 @@ func (m *mockBroker) PublishOnTopic(ctx context.Context, topic string, message i
 	return nil
 }
 
-func setupMocks(orderDS *mockOrderDS, statusDS *mockOrderStatusDS, broker *mockBroker) func() {
+type mockApiClient struct {
+	getFunc func(path string, obj any) error
+}
+
+func (m *mockApiClient) Get(path string, obj any) error {
+	if m.getFunc != nil {
+		return m.getFunc(path, obj)
+	}
+	// Default behavior - populate product data
+	if product, ok := obj.(*client.ProductResponseDTO); ok {
+		product.ID = "product-1"
+		product.Price = 10.0
+		product.Active = true
+	}
+	return nil
+}
+
+func setupMocks(orderDS *mockOrderDS, statusDS *mockOrderStatusDS, broker *mockBroker, apiClient *mockApiClient) func() {
 	factories.SetNewOrderDataSource(func() interfaces.IOrderDataSource {
 		return orderDS
 	})
@@ -126,11 +144,15 @@ func setupMocks(orderDS *mockOrderDS, statusDS *mockOrderStatusDS, broker *mockB
 	factories.SetNewMessageBroker(func() brokers.MessageBroker {
 		return broker
 	})
+	factories.SetNewApiClient(func() client.IApiClient {
+		return apiClient
+	})
 
 	return func() {
 		factories.SetNewOrderDataSource(nil)
 		factories.SetNewOrderStatusDataSource(nil)
 		factories.SetNewMessageBroker(nil)
+		factories.SetNewApiClient(nil)
 	}
 }
 
@@ -138,7 +160,8 @@ func TestNewOrderHandler(t *testing.T) {
 	orderDS := &mockOrderDS{}
 	statusDS := &mockOrderStatusDS{}
 	broker := &mockBroker{}
-	cleanup := setupMocks(orderDS, statusDS, broker)
+	apiClient := &mockApiClient{}
+	cleanup := setupMocks(orderDS, statusDS, broker, apiClient)
 	defer cleanup()
 
 	handler := NewOrderHandler()
@@ -163,7 +186,8 @@ func TestOrderHandler_Create_Success(t *testing.T) {
 			return nil
 		},
 	}
-	cleanup := setupMocks(orderDS, statusDS, messageBroker)
+	apiClient := &mockApiClient{}
+	cleanup := setupMocks(orderDS, statusDS, messageBroker, apiClient)
 	defer cleanup()
 
 	handler := NewOrderHandler()
@@ -193,7 +217,8 @@ func TestOrderHandler_Create_InvalidBody(t *testing.T) {
 	orderDS := &mockOrderDS{}
 	statusDS := &mockOrderStatusDS{}
 	messageBroker := &mockBroker{}
-	cleanup := setupMocks(orderDS, statusDS, messageBroker)
+	apiClient := &mockApiClient{}
+	cleanup := setupMocks(orderDS, statusDS, messageBroker, apiClient)
 	defer cleanup()
 
 	handler := NewOrderHandler()
@@ -234,7 +259,8 @@ func TestOrderHandler_FindAll_Success(t *testing.T) {
 	}
 	statusDS := &mockOrderStatusDS{}
 	messageBroker := &mockBroker{}
-	cleanup := setupMocks(orderDS, statusDS, messageBroker)
+	apiClient := &mockApiClient{}
+	cleanup := setupMocks(orderDS, statusDS, messageBroker, apiClient)
 	defer cleanup()
 
 	handler := NewOrderHandler()
@@ -260,7 +286,8 @@ func TestOrderHandler_FindAll_WithFilters(t *testing.T) {
 	}
 	statusDS := &mockOrderStatusDS{}
 	messageBroker := &mockBroker{}
-	cleanup := setupMocks(orderDS, statusDS, messageBroker)
+	apiClient := &mockApiClient{}
+	cleanup := setupMocks(orderDS, statusDS, messageBroker, apiClient)
 	defer cleanup()
 
 	handler := NewOrderHandler()
@@ -298,7 +325,8 @@ func TestOrderHandler_FindByID_Success(t *testing.T) {
 	}
 	statusDS := &mockOrderStatusDS{}
 	messageBroker := &mockBroker{}
-	cleanup := setupMocks(orderDS, statusDS, messageBroker)
+	apiClient := &mockApiClient{}
+	cleanup := setupMocks(orderDS, statusDS, messageBroker, apiClient)
 	defer cleanup()
 
 	handler := NewOrderHandler()
@@ -343,7 +371,8 @@ func TestOrderHandler_Update_Success(t *testing.T) {
 		},
 	}
 	messageBroker := &mockBroker{}
-	cleanup := setupMocks(orderDS, statusDS, messageBroker)
+	apiClient := &mockApiClient{}
+	cleanup := setupMocks(orderDS, statusDS, messageBroker, apiClient)
 	defer cleanup()
 
 	handler := NewOrderHandler()
@@ -369,7 +398,8 @@ func TestOrderHandler_Update_InvalidBody(t *testing.T) {
 	orderDS := &mockOrderDS{}
 	statusDS := &mockOrderStatusDS{}
 	messageBroker := &mockBroker{}
-	cleanup := setupMocks(orderDS, statusDS, messageBroker)
+	apiClient := &mockApiClient{}
+	cleanup := setupMocks(orderDS, statusDS, messageBroker, apiClient)
 	defer cleanup()
 
 	handler := NewOrderHandler()
@@ -409,7 +439,8 @@ func TestOrderHandler_Delete_Success(t *testing.T) {
 	}
 	statusDS := &mockOrderStatusDS{}
 	messageBroker := &mockBroker{}
-	cleanup := setupMocks(orderDS, statusDS, messageBroker)
+	apiClient := &mockApiClient{}
+	cleanup := setupMocks(orderDS, statusDS, messageBroker, apiClient)
 	defer cleanup()
 
 	handler := NewOrderHandler()
@@ -438,7 +469,8 @@ func TestOrderHandler_FindAllStatus_Success(t *testing.T) {
 		},
 	}
 	messageBroker := &mockBroker{}
-	cleanup := setupMocks(orderDS, statusDS, messageBroker)
+	apiClient := &mockApiClient{}
+	cleanup := setupMocks(orderDS, statusDS, messageBroker, apiClient)
 	defer cleanup()
 
 	handler := NewOrderHandler()
@@ -499,7 +531,8 @@ func TestOrderHandler_Create_Error(t *testing.T) {
 		},
 	}
 	messageBroker := &mockBroker{}
-	cleanup := setupMocks(orderDS, statusDS, messageBroker)
+	apiClient := &mockApiClient{}
+	cleanup := setupMocks(orderDS, statusDS, messageBroker, apiClient)
 	defer cleanup()
 
 	handler := NewOrderHandler()
@@ -533,7 +566,8 @@ func TestOrderHandler_FindAll_Error(t *testing.T) {
 	}
 	statusDS := &mockOrderStatusDS{}
 	messageBroker := &mockBroker{}
-	cleanup := setupMocks(orderDS, statusDS, messageBroker)
+	apiClient := &mockApiClient{}
+	cleanup := setupMocks(orderDS, statusDS, messageBroker, apiClient)
 	defer cleanup()
 
 	handler := NewOrderHandler()
@@ -559,7 +593,8 @@ func TestOrderHandler_FindByID_Error(t *testing.T) {
 	}
 	statusDS := &mockOrderStatusDS{}
 	messageBroker := &mockBroker{}
-	cleanup := setupMocks(orderDS, statusDS, messageBroker)
+	apiClient := &mockApiClient{}
+	cleanup := setupMocks(orderDS, statusDS, messageBroker, apiClient)
 	defer cleanup()
 
 	handler := NewOrderHandler()
@@ -585,7 +620,8 @@ func TestOrderHandler_Update_Error(t *testing.T) {
 	}
 	statusDS := &mockOrderStatusDS{}
 	messageBroker := &mockBroker{}
-	cleanup := setupMocks(orderDS, statusDS, messageBroker)
+	apiClient := &mockApiClient{}
+	cleanup := setupMocks(orderDS, statusDS, messageBroker, apiClient)
 	defer cleanup()
 
 	handler := NewOrderHandler()
@@ -615,7 +651,8 @@ func TestOrderHandler_Delete_Error(t *testing.T) {
 	}
 	statusDS := &mockOrderStatusDS{}
 	messageBroker := &mockBroker{}
-	cleanup := setupMocks(orderDS, statusDS, messageBroker)
+	apiClient := &mockApiClient{}
+	cleanup := setupMocks(orderDS, statusDS, messageBroker, apiClient)
 	defer cleanup()
 
 	handler := NewOrderHandler()
@@ -641,7 +678,8 @@ func TestOrderHandler_FindAllStatus_Error(t *testing.T) {
 		},
 	}
 	messageBroker := &mockBroker{}
-	cleanup := setupMocks(orderDS, statusDS, messageBroker)
+	apiClient := &mockApiClient{}
+	cleanup := setupMocks(orderDS, statusDS, messageBroker, apiClient)
 	defer cleanup()
 
 	handler := NewOrderHandler()
@@ -685,7 +723,8 @@ func TestOrderHandler_UpdateStatus_Success(t *testing.T) {
 		},
 	}
 	messageBroker := &mockBroker{}
-	cleanup := setupMocks(orderDS, statusDS, messageBroker)
+	apiClient := &mockApiClient{}
+	cleanup := setupMocks(orderDS, statusDS, messageBroker, apiClient)
 	defer cleanup()
 
 	handler := NewOrderHandler()
@@ -721,7 +760,8 @@ func TestOrderHandler_UpdateStatus_InvalidBody(t *testing.T) {
 	orderDS := &mockOrderDS{}
 	statusDS := &mockOrderStatusDS{}
 	messageBroker := &mockBroker{}
-	cleanup := setupMocks(orderDS, statusDS, messageBroker)
+	apiClient := &mockApiClient{}
+	cleanup := setupMocks(orderDS, statusDS, messageBroker, apiClient)
 	defer cleanup()
 
 	handler := NewOrderHandler()
@@ -758,7 +798,8 @@ func TestOrderHandler_UpdateStatus_OrderNotFound(t *testing.T) {
 	}
 	statusDS := &mockOrderStatusDS{}
 	messageBroker := &mockBroker{}
-	cleanup := setupMocks(orderDS, statusDS, messageBroker)
+	apiClient := &mockApiClient{}
+	cleanup := setupMocks(orderDS, statusDS, messageBroker, apiClient)
 	defer cleanup()
 
 	handler := NewOrderHandler()
@@ -811,7 +852,8 @@ func TestOrderHandler_UpdateStatus_StatusNotFound(t *testing.T) {
 		},
 	}
 	messageBroker := &mockBroker{}
-	cleanup := setupMocks(orderDS, statusDS, messageBroker)
+	apiClient := &mockApiClient{}
+	cleanup := setupMocks(orderDS, statusDS, messageBroker, apiClient)
 	defer cleanup()
 
 	handler := NewOrderHandler()
@@ -867,7 +909,8 @@ func TestOrderHandler_UpdateStatus_UpdateError(t *testing.T) {
 		},
 	}
 	messageBroker := &mockBroker{}
-	cleanup := setupMocks(orderDS, statusDS, messageBroker)
+	apiClient := &mockApiClient{}
+	cleanup := setupMocks(orderDS, statusDS, messageBroker, apiClient)
 	defer cleanup()
 
 	handler := NewOrderHandler()
@@ -927,7 +970,8 @@ func TestOrderHandler_UpdateStatus_SpecialCharactersInID(t *testing.T) {
 		},
 	}
 	messageBroker := &mockBroker{}
-	cleanup := setupMocks(orderDS, statusDS, messageBroker)
+	apiClient := &mockApiClient{}
+	cleanup := setupMocks(orderDS, statusDS, messageBroker, apiClient)
 	defer cleanup()
 
 	handler := NewOrderHandler()
@@ -1000,7 +1044,8 @@ func TestOrderHandler_UpdateStatus_DifferentStatuses(t *testing.T) {
 				},
 			}
 			messageBroker := &mockBroker{}
-			cleanup := setupMocks(orderDS, statusDS, messageBroker)
+			apiClient := &mockApiClient{}
+			cleanup := setupMocks(orderDS, statusDS, messageBroker, apiClient)
 			defer cleanup()
 
 			handler := NewOrderHandler()

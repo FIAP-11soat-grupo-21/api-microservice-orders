@@ -5,10 +5,12 @@ import (
 	"errors"
 	"testing"
 
+	"microservice/infra/api/client"
 	"microservice/internal/adapters/brokers"
 	"microservice/internal/adapters/daos"
 	"microservice/internal/adapters/dtos"
 	"microservice/internal/adapters/gateways"
+	"microservice/mocks"
 )
 
 type testOrderDataSource struct {
@@ -114,20 +116,44 @@ func (m *testMessageBroker) Close() error {
 	return nil
 }
 
+type testMockApiClient struct{}
+
+func (m *testMockApiClient) Get(path string, obj any) error {
+	if path == "/products/product-1" {
+		response := obj.(*client.ProductResponseDTO)
+		response.ID = "product-1"
+		response.Price = 10.0
+		response.Active = true
+		return nil
+	} else if path == "/products/product-2" {
+		response := obj.(*client.ProductResponseDTO)
+		response.ID = "product-2"
+		response.Price = 25.0
+		response.Active = true
+		return nil
+	}
+
+	return nil
+}
+
 func TestCreateOrderUseCase_Execute_Integration(t *testing.T) {
+	mocks.SetupEnv()
+	defer mocks.CleanupEnv()
+
 	orderDS := newTestOrderDataSource()
 	statusDS := newTestOrderStatusDataSource()
 	broker := &testMessageBroker{}
+	apiClient := &testMockApiClient{}
 
 	orderGateway := gateways.NewOrderGateway(orderDS)
 	statusGateway := gateways.NewOrderStatusGateway(statusDS)
 
-	uc := NewCreateOrderUseCase(orderGateway, statusGateway, broker)
+	uc := NewCreateOrderUseCase(orderGateway, statusGateway, broker, apiClient)
 
 	customerID := "customer-123"
 	items := []dtos.CreateOrderItemDTO{
-		{ProductID: "product-1", Quantity: 2, Price: 10.0},
-		{ProductID: "product-2", Quantity: 1, Price: 25.0},
+		{ProductID: "product-1", Quantity: 2},
+		{ProductID: "product-2", Quantity: 1},
 	}
 
 	result, err := uc.Execute(&customerID, items)
@@ -158,14 +184,15 @@ func TestCreateOrderUseCase_Execute_WithoutCustomerID_Integration(t *testing.T) 
 	orderDS := newTestOrderDataSource()
 	statusDS := newTestOrderStatusDataSource()
 	broker := &testMessageBroker{}
+	apiClient := &testMockApiClient{}
 
 	orderGateway := gateways.NewOrderGateway(orderDS)
 	statusGateway := gateways.NewOrderStatusGateway(statusDS)
 
-	uc := NewCreateOrderUseCase(orderGateway, statusGateway, broker)
+	uc := NewCreateOrderUseCase(orderGateway, statusGateway, broker, apiClient)
 
 	items := []dtos.CreateOrderItemDTO{
-		{ProductID: "product-1", Quantity: 1, Price: 15.0},
+		{ProductID: "product-1", Quantity: 1},
 	}
 
 	result, err := uc.Execute(nil, items)
@@ -187,15 +214,15 @@ func TestCreateOrderUseCase_Execute_StatusNotFound_Integration(t *testing.T) {
 	orderDS := newTestOrderDataSource()
 	statusDS := &testOrderStatusDataSource{statuses: make(map[string]daos.OrderStatusDAO)} // Empty statuses
 	broker := &testMessageBroker{}
-
+	apiClient := &testMockApiClient{}
 	orderGateway := gateways.NewOrderGateway(orderDS)
 	statusGateway := gateways.NewOrderStatusGateway(statusDS)
 
-	uc := NewCreateOrderUseCase(orderGateway, statusGateway, broker)
+	uc := NewCreateOrderUseCase(orderGateway, statusGateway, broker, apiClient)
 
 	customerID := "customer-123"
 	items := []dtos.CreateOrderItemDTO{
-		{ProductID: "product-1", Quantity: 1, Price: 15.0},
+		{ProductID: "product-1", Quantity: 1},
 	}
 
 	_, err := uc.Execute(&customerID, items)
@@ -287,15 +314,15 @@ func TestCreateOrderUseCase_Execute_DatabaseError_Integration(t *testing.T) {
 	orderDS := &errorOrderDataSource{}
 	statusDS := newTestOrderStatusDataSource()
 	broker := &testMessageBroker{}
-
+	apiClient := &testMockApiClient{}
 	orderGateway := gateways.NewOrderGateway(orderDS)
 	statusGateway := gateways.NewOrderStatusGateway(statusDS)
 
-	uc := NewCreateOrderUseCase(orderGateway, statusGateway, broker)
+	uc := NewCreateOrderUseCase(orderGateway, statusGateway, broker, apiClient)
 
 	customerID := "customer-123"
 	items := []dtos.CreateOrderItemDTO{
-		{ProductID: "product-1", Quantity: 1, Price: 15.0},
+		{ProductID: "product-1", Quantity: 1},
 	}
 
 	_, err := uc.Execute(&customerID, items)

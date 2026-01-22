@@ -4,9 +4,11 @@ import (
 	"context"
 	"testing"
 
+	"microservice/infra/api/client"
 	"microservice/internal/adapters/brokers"
 	"microservice/internal/adapters/dtos"
 	"microservice/internal/domain/entities"
+	"microservice/mocks"
 )
 
 func TestCreateOrderUseCase_ValidatesItemQuantity(t *testing.T) {
@@ -87,7 +89,6 @@ func TestCreateOrderUseCase_DTOStructure(t *testing.T) {
 			{
 				ProductID: "product-1",
 				Quantity:  2,
-				Price:     10.0,
 			},
 		},
 	}
@@ -104,7 +105,6 @@ func TestCreateOrderUseCase_ItemDTOStructure(t *testing.T) {
 	dto := dtos.CreateOrderItemDTO{
 		ProductID: "product-1",
 		Quantity:  2,
-		Price:     15.0,
 	}
 
 	if dto.ProductID != "product-1" {
@@ -112,9 +112,6 @@ func TestCreateOrderUseCase_ItemDTOStructure(t *testing.T) {
 	}
 	if dto.Quantity != 2 {
 		t.Errorf("CreateOrderItemDTO.Quantity = %v, want 2", dto.Quantity)
-	}
-	if dto.Price != 15.0 {
-		t.Errorf("CreateOrderItemDTO.Price = %v, want 15.0", dto.Price)
 	}
 }
 
@@ -158,14 +155,28 @@ func (m *MockMessageBroker) Close() error {
 	return nil
 }
 
+type MockApiClient struct{}
+
+func (m *MockApiClient) Get(path string, obj any) error {
+	if path == "/products/product-1" {
+		response := obj.(*client.ProductResponseDTO)
+		response.ID = "product-1"
+		response.Price = 10.0
+		response.Active = true
+		return nil
+	}
+	return nil
+}
+
 // Comprehensive tests using mocks for full coverage
 
 func TestCreateOrderUseCase_NewCreateOrderUseCase(t *testing.T) {
 	mockOrderGateway := NewMockOrderGateway()
 	mockStatusGateway := NewMockOrderStatusGateway()
 	mockBroker := &MockMessageBroker{}
+	mockApiClient := &MockApiClient{}
 
-	uc := NewCreateOrderUseCase(mockOrderGateway, mockStatusGateway, mockBroker)
+	uc := NewCreateOrderUseCase(mockOrderGateway, mockStatusGateway, mockBroker, mockApiClient)
 
 	if uc == nil {
 		t.Error("Expected use case to be created")
@@ -173,22 +184,25 @@ func TestCreateOrderUseCase_NewCreateOrderUseCase(t *testing.T) {
 }
 
 func TestCreateOrderUseCase_Execute_Success(t *testing.T) {
+	mocks.SetupEnv()
+	defer mocks.CleanupEnv()
+
 	mockOrderGateway := NewMockOrderGateway()
 	mockStatusGateway := NewMockOrderStatusGateway()
 	mockBroker := &MockMessageBroker{}
+	mockApiClient := &MockApiClient{}
 
 	// Add initial status
 	initialStatus, _ := entities.NewOrderStatus(INITIAL_ORDER_STATUS_ID, "Pending")
 	mockStatusGateway.AddStatus(initialStatus)
 
-	uc := NewCreateOrderUseCase(mockOrderGateway, mockStatusGateway, mockBroker)
+	uc := NewCreateOrderUseCase(mockOrderGateway, mockStatusGateway, mockBroker, mockApiClient)
 
 	customerID := "customer-123"
 	items := []dtos.CreateOrderItemDTO{
 		{
 			ProductID: "product-1",
 			Quantity:  2,
-			Price:     10.0,
 		},
 	}
 
@@ -218,18 +232,18 @@ func TestCreateOrderUseCase_Execute_StatusNotFound(t *testing.T) {
 	mockOrderGateway := NewMockOrderGateway()
 	mockStatusGateway := NewMockOrderStatusGateway()
 	mockBroker := &MockMessageBroker{}
+	mockApiClient := &MockApiClient{}
 
 	// Don't add the initial status to simulate not found
 	mockStatusGateway.SetShouldFailFindByID(true)
 
-	uc := NewCreateOrderUseCase(mockOrderGateway, mockStatusGateway, mockBroker)
+	uc := NewCreateOrderUseCase(mockOrderGateway, mockStatusGateway, mockBroker, mockApiClient)
 
 	customerID := "customer-123"
 	items := []dtos.CreateOrderItemDTO{
 		{
 			ProductID: "product-1",
 			Quantity:  2,
-			Price:     10.0,
 		},
 	}
 
@@ -247,6 +261,7 @@ func TestCreateOrderUseCase_Execute_CreateError(t *testing.T) {
 	mockOrderGateway := NewMockOrderGateway()
 	mockStatusGateway := NewMockOrderStatusGateway()
 	mockBroker := &MockMessageBroker{}
+	mockApiClient := &MockApiClient{}
 
 	// Add initial status
 	initialStatus, _ := entities.NewOrderStatus(INITIAL_ORDER_STATUS_ID, "Pending")
@@ -255,14 +270,13 @@ func TestCreateOrderUseCase_Execute_CreateError(t *testing.T) {
 	// Make create fail
 	mockOrderGateway.SetShouldFailCreate(true)
 
-	uc := NewCreateOrderUseCase(mockOrderGateway, mockStatusGateway, mockBroker)
+	uc := NewCreateOrderUseCase(mockOrderGateway, mockStatusGateway, mockBroker, mockApiClient)
 
 	customerID := "customer-123"
 	items := []dtos.CreateOrderItemDTO{
 		{
 			ProductID: "product-1",
 			Quantity:  2,
-			Price:     10.0,
 		},
 	}
 
