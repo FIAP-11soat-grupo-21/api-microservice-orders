@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 )
 
@@ -19,6 +20,8 @@ func (c *HTTPClient) Get(path string, obj any) error {
 	httpClient := new(http.Client)
 
 	url := c.baseURL + path
+
+	log.Println("Making GET Request on URL", url)
 
 	req, err := http.NewRequest("GET", url, nil)
 
