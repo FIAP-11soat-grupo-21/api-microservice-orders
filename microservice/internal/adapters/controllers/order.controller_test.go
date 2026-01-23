@@ -135,7 +135,7 @@ func TestOrderController_Create_Success(t *testing.T) {
 		},
 	}
 
-	mockAC.On("Get", "/products/product-1", mock.Anything).Run(func(args mock.Arguments) {
+	mockAC.On("Get", "/v1/products/product-1", mock.Anything).Run(func(args mock.Arguments) {
 		response := args.Get(1).(*client.ProductResponseDTO)
 		response.ID = "product-1"
 		response.Price = 10.50
