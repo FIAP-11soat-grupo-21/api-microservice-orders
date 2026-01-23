@@ -48,7 +48,7 @@ func (uc *CreateOrderUseCase) Execute(customerID *string, items []dtos.CreateOrd
 	order.CreatedAt = time.Now()
 
 	for _, item := range items {
-		path := "/v1/products/" + item.ProductID
+		path := "/products/" + item.ProductID
 
 		product := new(client.ProductResponseDTO)
 

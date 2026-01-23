@@ -158,7 +158,7 @@ func (m *MockMessageBroker) Close() error {
 type MockApiClient struct{}
 
 func (m *MockApiClient) Get(path string, obj any) error {
-	if path == "/v1/products/product-1" {
+	if path == "/products/product-1" {
 		response := obj.(*client.ProductResponseDTO)
 		response.ID = "product-1"
 		response.Price = 10.0
