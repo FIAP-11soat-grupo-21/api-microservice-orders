@@ -159,7 +159,6 @@ func (m *MockMessageBroker) Close() error {
 
 type MockApiClient struct {
 	shouldFail           bool
-	returnInactive       bool
 	inactiveProductIDs   map[string]bool
 	invalidPriceProducts map[string]bool
 }
