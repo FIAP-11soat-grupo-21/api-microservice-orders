@@ -18,6 +18,9 @@ module "order_api" {
       AWS_COGNITO_USER_POOL_CLIENT_ID : data.terraform_remote_state.infra.outputs.cognito_user_pool_client_id
       USER_PASSWORD_AUTH : data.terraform_remote_state.infra.outputs.cognito_user_pool_client_secret
 
+      # API Gateway
+      API_GATEWAY_URL : data.terraform_remote_state.infra.outputs.api_gateway_url
+
       # Database configuration
       DB_HOST : data.terraform_remote_state.infra.outputs.rds_address
 
