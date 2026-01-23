@@ -47,10 +47,6 @@ func (c *HTTPClient) Get(path string, obj any) error {
 		return fmt.Errorf("API request failed with status %d: %s", resp.StatusCode, string(body))
 	}
 
-	if resp.Header.Get("Content-Type") != "application/json" {
-		return fmt.Errorf("unexpected content type: %s", resp.Header.Get("Content-Type"))
-	}
-
 	if err := json.Unmarshal(body, &obj); err != nil {
 		return err
 	}
