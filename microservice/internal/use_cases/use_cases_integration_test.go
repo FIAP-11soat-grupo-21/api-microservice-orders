@@ -119,13 +119,13 @@ func (m *testMessageBroker) Close() error {
 type testMockApiClient struct{}
 
 func (m *testMockApiClient) Get(path string, obj any) error {
-	if path == "/products/product-1" {
+	if path == "/v1/products/product-1" {
 		response := obj.(*client.ProductResponseDTO)
 		response.ID = "product-1"
 		response.Price = 10.0
 		response.Active = true
 		return nil
-	} else if path == "/products/product-2" {
+	} else if path == "/v1/products/product-2" {
 		response := obj.(*client.ProductResponseDTO)
 		response.ID = "product-2"
 		response.Price = 25.0
