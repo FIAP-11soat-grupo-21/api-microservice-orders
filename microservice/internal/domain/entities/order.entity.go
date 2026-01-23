@@ -79,7 +79,7 @@ func (o *Order) ToMap() map[string]interface{} {
 	}
 
 	return map[string]interface{}{
-		"id":          o.ID,
+		"order_id":    o.ID,
 		"customer_id": o.CustomerID,
 		"amount":      o.Amount.Value(),
 		"status":      o.Status.ToMap(),
