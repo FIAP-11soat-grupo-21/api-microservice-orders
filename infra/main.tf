@@ -21,11 +21,13 @@ module "order_api" {
       # Database configuration
       DB_HOST : data.terraform_remote_state.infra.outputs.rds_address
 
-      # SQS configuration
-      AWS_SQS_ORDERS_QUEUE : data.terraform_remote_state.infra.outputs.sqs_orders_queue_url
-      AWS_SQS_ORDERS_ERROR_QUEUE : data.terraform_remote_state.infra.outputs.sqs_orders_order_error_queue_url
-      AWS_SQS_PAYMENTS_QUEUE : data.terraform_remote_state.infra.outputs.sqs_payments_queue_url
-      AWS_SQS_KITCHEN_ORDERS_QUEUE : data.terraform_remote_state.infra.outputs.sqs_kitchen_orders_queue_url
+      # SQS
+      SQS_UPDATE_ORDER_STATUS_QUEUE_URL : data.terraform_remote_state.infra.outputs.sqs_orders_queue_url,
+      SQS_ORDER_ERROR_QUEUE_URL : data.terraform_remote_state.infra.outputs.sqs_orders_order_error_queue_url,
+
+      # SNS
+      SNS_ORDER_ERROR_TOPIC_ARN : data.terraform_remote_state.infra.outputs.sns_order_error_topic_arn,
+      SNS_ORDER_CREATED_TOPIC_ARN : data.terraform_remote_state.infra.outputs.sns_order_created_topic_arn
   })
   ecs_container_secrets = merge(var.container_secrets,
     {
