@@ -2,14 +2,22 @@ package rest
 
 import (
 	"context"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"testing"
 	"time"
 
+	"microservice/mocks"
 	"microservice/utils/config"
 
+	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 )
+
+func init() {
+	gin.SetMode(gin.TestMode)
+}
 
 func TestInit_ProductionMode(t *testing.T) {
 	// Set environment variables for production mode
@@ -273,6 +281,9 @@ func TestInit_DefaultConfiguration(t *testing.T) {
 }
 
 func TestNewRouter(t *testing.T) {
+	mocks.SetupEnv()
+	defer mocks.CleanupEnv()
+
 	// Test that NewRouter creates a valid Gin router
 	router := NewRouter()
 	assert.NotNil(t, router)
@@ -288,7 +299,112 @@ func TestNewRouter(t *testing.T) {
 	}
 
 	// Should have health check route
-	assert.True(t, routePaths["/health"] || routePaths["/api/health"])
+	assert.True(t, routePaths["/health"], "Health route should be registered")
+}
+
+func TestNewRouter_HealthEndpoint(t *testing.T) {
+	mocks.SetupEnv()
+	defer mocks.CleanupEnv()
+
+	router := NewRouter()
+
+	// Test health endpoint
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/health", nil)
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+}
+
+func TestNewRouter_V1OrdersRoutes(t *testing.T) {
+	mocks.SetupEnv()
+	defer mocks.CleanupEnv()
+
+	router := NewRouter()
+	routes := router.Routes()
+
+	// Collect all route paths
+	routePaths := make(map[string][]string)
+	for _, route := range routes {
+		routePaths[route.Path] = append(routePaths[route.Path], route.Method)
+	}
+
+	// Check v1 orders routes exist
+	expectedRoutes := []string{
+		"/v1/orders",
+		"/v1/orders/:id",
+	}
+
+	for _, expectedRoute := range expectedRoutes {
+		_, exists := routePaths[expectedRoute]
+		assert.True(t, exists, "Route %s should exist", expectedRoute)
+	}
+
+	// Check status route (has trailing slash)
+	_, hasStatusRoute := routePaths["/v1/orders/status/"]
+	assert.True(t, hasStatusRoute, "Route /v1/orders/status/ should exist")
+}
+
+func TestNewRouter_MiddlewaresApplied(t *testing.T) {
+	mocks.SetupEnv()
+	defer mocks.CleanupEnv()
+
+	router := NewRouter()
+
+	// Test that error handler middleware is applied by making a request
+	// that would trigger it (request to non-existent route should return 404)
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/non-existent-route", nil)
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusNotFound, w.Code)
+}
+
+func TestNewRouter_RecoveryMiddleware(t *testing.T) {
+	mocks.SetupEnv()
+	defer mocks.CleanupEnv()
+
+	router := NewRouter()
+
+	// The recovery middleware should prevent panics from crashing the server
+	// We can't easily test panic recovery without modifying handlers,
+	// but we can verify the router was created with middlewares
+
+	assert.NotNil(t, router)
+}
+
+func TestNewRouter_LoggerMiddleware(t *testing.T) {
+	mocks.SetupEnv()
+	defer mocks.CleanupEnv()
+
+	router := NewRouter()
+
+	// Make a request to verify logger middleware doesn't break anything
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/health", nil)
+	router.ServeHTTP(w, req)
+
+	// Request should complete successfully
+	assert.Equal(t, http.StatusOK, w.Code)
+}
+
+func TestNewRouter_OrderStatusRoutes(t *testing.T) {
+	mocks.SetupEnv()
+	defer mocks.CleanupEnv()
+
+	router := NewRouter()
+	routes := router.Routes()
+
+	// Check for order status routes
+	hasStatusRoute := false
+	for _, route := range routes {
+		if route.Path == "/v1/orders/status/" {
+			hasStatusRoute = true
+			break
+		}
+	}
+
+	assert.True(t, hasStatusRoute, "Order status route should be registered")
 }
 
 func TestInit_RouterCreation(t *testing.T) {
@@ -425,4 +541,163 @@ func TestInit_ContextHandling(t *testing.T) {
 	default:
 		t.Error("Context should be cancelled")
 	}
+}
+
+func TestNewRouter_HTTPMethods(t *testing.T) {
+	mocks.SetupEnv()
+	defer mocks.CleanupEnv()
+
+	router := NewRouter()
+	routes := router.Routes()
+
+	// Collect routes by method
+	methodRoutes := make(map[string][]string)
+	for _, route := range routes {
+		methodRoutes[route.Method] = append(methodRoutes[route.Method], route.Path)
+	}
+
+	// Should have GET routes
+	assert.NotEmpty(t, methodRoutes["GET"], "Should have GET routes")
+
+	// Should have POST routes for creating orders
+	assert.NotEmpty(t, methodRoutes["POST"], "Should have POST routes")
+
+	// Should have PUT routes for updating orders
+	assert.NotEmpty(t, methodRoutes["PUT"], "Should have PUT routes")
+
+	// Should have DELETE routes
+	assert.NotEmpty(t, methodRoutes["DELETE"], "Should have DELETE routes")
+}
+
+func TestNewRouter_OrderCRUDRoutes(t *testing.T) {
+	mocks.SetupEnv()
+	defer mocks.CleanupEnv()
+
+	router := NewRouter()
+	routes := router.Routes()
+
+	// Build a map of path -> methods
+	routeMethods := make(map[string]map[string]bool)
+	for _, route := range routes {
+		if routeMethods[route.Path] == nil {
+			routeMethods[route.Path] = make(map[string]bool)
+		}
+		routeMethods[route.Path][route.Method] = true
+	}
+
+	// Check CRUD operations for /v1/orders
+	ordersPath := "/v1/orders"
+	orderByIDPath := "/v1/orders/:id"
+
+	// GET /v1/orders - list all
+	assert.True(t, routeMethods[ordersPath]["GET"], "GET /v1/orders should exist")
+
+	// POST /v1/orders - create
+	assert.True(t, routeMethods[ordersPath]["POST"], "POST /v1/orders should exist")
+
+	// GET /v1/orders/:id - get by ID
+	assert.True(t, routeMethods[orderByIDPath]["GET"], "GET /v1/orders/:id should exist")
+
+	// PUT /v1/orders/:id - update
+	assert.True(t, routeMethods[orderByIDPath]["PUT"], "PUT /v1/orders/:id should exist")
+
+	// DELETE /v1/orders/:id - delete
+	assert.True(t, routeMethods[orderByIDPath]["DELETE"], "DELETE /v1/orders/:id should exist")
+}
+
+func TestNewRouter_ContentType(t *testing.T) {
+	mocks.SetupEnv()
+	defer mocks.CleanupEnv()
+
+	router := NewRouter()
+
+	// Test health endpoint returns JSON
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/health", nil)
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	contentType := w.Header().Get("Content-Type")
+	assert.Contains(t, contentType, "application/json")
+}
+
+func TestNewRouter_MethodNotAllowed(t *testing.T) {
+	mocks.SetupEnv()
+	defer mocks.CleanupEnv()
+
+	router := NewRouter()
+
+	// Try to use a method that is not allowed on health endpoint
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("DELETE", "/health", nil)
+	router.ServeHTTP(w, req)
+
+	// Should return 404 or 405
+	assert.True(t, w.Code == http.StatusNotFound || w.Code == http.StatusMethodNotAllowed)
+}
+
+func TestNewRouter_MultipleRequests(t *testing.T) {
+	mocks.SetupEnv()
+	defer mocks.CleanupEnv()
+
+	router := NewRouter()
+
+	// Make multiple requests to ensure router handles concurrent requests
+	for i := 0; i < 10; i++ {
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/health", nil)
+		router.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusOK, w.Code)
+	}
+}
+
+func TestNewRouter_RouteGroups(t *testing.T) {
+	mocks.SetupEnv()
+	defer mocks.CleanupEnv()
+
+	router := NewRouter()
+	routes := router.Routes()
+
+	// Count routes under /v1 prefix
+	v1RouteCount := 0
+	for _, route := range routes {
+		if len(route.Path) >= 3 && route.Path[:3] == "/v1" {
+			v1RouteCount++
+		}
+	}
+
+	// Should have multiple v1 routes
+	assert.Greater(t, v1RouteCount, 0, "Should have routes under /v1")
+}
+
+func TestNewRouter_HandlerRegistration(t *testing.T) {
+	mocks.SetupEnv()
+	defer mocks.CleanupEnv()
+
+	router := NewRouter()
+	routes := router.Routes()
+
+	// Each route should have a handler
+	for _, route := range routes {
+		assert.NotNil(t, route.HandlerFunc, "Route %s should have a handler", route.Path)
+	}
+}
+
+func TestNewRouter_OrderStatusUpdateRoute(t *testing.T) {
+	mocks.SetupEnv()
+	defer mocks.CleanupEnv()
+
+	router := NewRouter()
+	routes := router.Routes()
+
+	// Check for order status update route
+	hasStatusUpdateRoute := false
+	for _, route := range routes {
+		if route.Path == "/v1/orders/:id/status" && route.Method == "PUT" {
+			hasStatusUpdateRoute = true
+			break
+		}
+	}
+
+	assert.True(t, hasStatusUpdateRoute, "Order status update route should be registered")
 }

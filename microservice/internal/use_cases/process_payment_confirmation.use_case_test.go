@@ -434,6 +434,37 @@ func TestProcessPaymentConfirmationUseCase_processConfirmedPayment_StatusNotFoun
 	assert.Nil(t, result)
 }
 
+func TestProcessPaymentConfirmationUseCase_processConfirmedPayment_UpdateFailed(t *testing.T) {
+	mockOrderGateway := NewMockOrderGateway()
+	mockStatusGateway := NewMockOrderStatusGateway()
+
+	customerID := "customer-1"
+	pendingStatus, _ := entities.NewOrderStatus("pending", "pending")
+	order, _ := entities.NewOrderWithItems("order-1", &customerID, 25.0, *pendingStatus, []entities.OrderItem{}, time.Now(), nil)
+
+	paidStatus, _ := entities.NewOrderStatus("paid", "Paid")
+
+	mockOrderGateway.AddOrder(order)
+	mockStatusGateway.AddStatus(paidStatus)
+
+	// Make update fail
+	mockOrderGateway.SetShouldFailUpdate(true)
+
+	uc := NewProcessPaymentConfirmationUseCase(mockOrderGateway, mockStatusGateway)
+
+	dto := PaymentConfirmationDTO{
+		OrderID:   "order-1",
+		PaymentID: "payment-1",
+		Status:    "confirmed",
+		Amount:    25.0,
+	}
+
+	result, err := uc.processConfirmedPayment(order, dto)
+
+	assert.Error(t, err)
+	assert.Nil(t, result)
+}
+
 func TestProcessPaymentConfirmationUseCase_processFailedPayment_Success(t *testing.T) {
 	mockOrderGateway := NewMockOrderGateway()
 	mockStatusGateway := NewMockOrderStatusGateway()
@@ -491,6 +522,37 @@ func TestProcessPaymentConfirmationUseCase_processFailedPayment_StatusNotFound(t
 	assert.Nil(t, result)
 }
 
+func TestProcessPaymentConfirmationUseCase_processFailedPayment_UpdateFailed(t *testing.T) {
+	mockOrderGateway := NewMockOrderGateway()
+	mockStatusGateway := NewMockOrderStatusGateway()
+
+	customerID := "customer-1"
+	pendingStatus, _ := entities.NewOrderStatus("pending", "pending")
+	order, _ := entities.NewOrderWithItems("order-1", &customerID, 25.0, *pendingStatus, []entities.OrderItem{}, time.Now(), nil)
+
+	failedStatus, _ := entities.NewOrderStatus("failed", "Failed")
+
+	mockOrderGateway.AddOrder(order)
+	mockStatusGateway.AddStatus(failedStatus)
+
+	// Make update fail
+	mockOrderGateway.SetShouldFailUpdate(true)
+
+	uc := NewProcessPaymentConfirmationUseCase(mockOrderGateway, mockStatusGateway)
+
+	dto := PaymentConfirmationDTO{
+		OrderID:   "order-1",
+		PaymentID: "payment-1",
+		Status:    "failed",
+		Amount:    25.0,
+	}
+
+	result, err := uc.processFailedPayment(order, dto)
+
+	assert.Error(t, err)
+	assert.Nil(t, result)
+}
+
 func TestProcessPaymentConfirmationUseCase_findOrCreateStatus_StatusExists(t *testing.T) {
 	mockOrderGateway := NewMockOrderGateway()
 	mockStatusGateway := NewMockOrderStatusGateway()
@@ -523,6 +585,22 @@ func TestProcessPaymentConfirmationUseCase_findOrCreateStatus_StatusNotExists(t 
 	assert.NotNil(t, status)
 	assert.Equal(t, "new-status", status.ID)
 	assert.Equal(t, "New Status", status.Name.Value())
+}
+
+func TestProcessPaymentConfirmationUseCase_findOrCreateStatus_InvalidStatusName(t *testing.T) {
+	mockOrderGateway := NewMockOrderGateway()
+	mockStatusGateway := NewMockOrderStatusGateway()
+
+	// Configurar mock para não encontrar o status
+	mockStatusGateway.SetShouldFailFindByID(true)
+
+	uc := NewProcessPaymentConfirmationUseCase(mockOrderGateway, mockStatusGateway)
+
+	// Try to create a status with invalid name (less than 3 characters)
+	status, err := uc.findOrCreateStatus("x", "ab")
+
+	assert.Error(t, err)
+	assert.Nil(t, status)
 }
 
 func TestProcessPaymentConfirmationUseCase_updateOrder_Success(t *testing.T) {
@@ -593,6 +671,34 @@ func TestProcessPaymentConfirmationUseCase_updateOrder_StatusNotFound(t *testing
 
 	assert.Error(t, err)
 	assert.IsType(t, &exceptions.OrderStatusNotFoundException{}, err)
+}
+
+func TestProcessPaymentConfirmationUseCase_updateOrder_UpdateFailed(t *testing.T) {
+	mockOrderGateway := NewMockOrderGateway()
+	mockStatusGateway := NewMockOrderStatusGateway()
+
+	customerID := "customer-1"
+	pendingStatus, _ := entities.NewOrderStatus("pending", "pending")
+	order, _ := entities.NewOrderWithItems("order-1", &customerID, 25.0, *pendingStatus, []entities.OrderItem{}, time.Now(), nil)
+
+	paidStatus, _ := entities.NewOrderStatus("paid", "Paid")
+
+	mockOrderGateway.AddOrder(order)
+	mockStatusGateway.AddStatus(paidStatus)
+
+	// Make update fail
+	mockOrderGateway.SetShouldFailUpdate(true)
+
+	uc := NewProcessPaymentConfirmationUseCase(mockOrderGateway, mockStatusGateway)
+
+	dto := dtos.UpdateOrderDTO{
+		ID:       "order-1",
+		StatusID: "paid",
+	}
+
+	_, err := uc.updateOrder(dto)
+
+	assert.Error(t, err)
 }
 
 func TestProcessPaymentConfirmationUseCase_Execute_Success_Confirmed(t *testing.T) {

@@ -2,12 +2,14 @@ package use_cases
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"microservice/infra/api/client"
 	"microservice/internal/adapters/brokers"
 	"microservice/internal/adapters/dtos"
 	"microservice/internal/domain/entities"
+	"microservice/internal/domain/exceptions"
 	"microservice/mocks"
 )
 
@@ -155,16 +157,50 @@ func (m *MockMessageBroker) Close() error {
 	return nil
 }
 
-type MockApiClient struct{}
+type MockApiClient struct {
+	shouldFail           bool
+	inactiveProductIDs   map[string]bool
+	invalidPriceProducts map[string]bool
+}
+
+func NewMockApiClient() *MockApiClient {
+	return &MockApiClient{
+		inactiveProductIDs:   make(map[string]bool),
+		invalidPriceProducts: make(map[string]bool),
+	}
+}
+
+func (m *MockApiClient) SetShouldFail(fail bool) {
+	m.shouldFail = fail
+}
+
+func (m *MockApiClient) SetProductInactive(productID string) {
+	m.inactiveProductIDs[productID] = true
+}
+
+func (m *MockApiClient) SetProductInvalidPrice(productID string) {
+	m.invalidPriceProducts[productID] = true
+}
 
 func (m *MockApiClient) Get(path string, obj any) error {
-	if path == "/products/product-1" {
-		response := obj.(*client.ProductResponseDTO)
-		response.ID = "product-1"
-		response.Price = 10.0
-		response.Active = true
-		return nil
+	if m.shouldFail {
+		return fmt.Errorf("API request failed")
 	}
+
+	response := obj.(*client.ProductResponseDTO)
+
+	// Extract product ID from path
+	productID := path[len("/products/"):]
+
+	response.ID = productID
+	response.Active = !m.inactiveProductIDs[productID]
+
+	if m.invalidPriceProducts[productID] {
+		response.Price = 0.0 // Invalid price that will cause NewOrderItem to fail
+	} else {
+		response.Price = 10.0
+	}
+
 	return nil
 }
 
@@ -190,7 +226,7 @@ func TestCreateOrderUseCase_Execute_Success(t *testing.T) {
 	mockOrderGateway := NewMockOrderGateway()
 	mockStatusGateway := NewMockOrderStatusGateway()
 	mockBroker := &MockMessageBroker{}
-	mockApiClient := &MockApiClient{}
+	mockApiClient := NewMockApiClient()
 
 	// Add initial status
 	initialStatus, _ := entities.NewOrderStatus(INITIAL_ORDER_STATUS_ID, "Pending")
@@ -232,7 +268,7 @@ func TestCreateOrderUseCase_Execute_StatusNotFound(t *testing.T) {
 	mockOrderGateway := NewMockOrderGateway()
 	mockStatusGateway := NewMockOrderStatusGateway()
 	mockBroker := &MockMessageBroker{}
-	mockApiClient := &MockApiClient{}
+	mockApiClient := NewMockApiClient()
 
 	// Don't add the initial status to simulate not found
 	mockStatusGateway.SetShouldFailFindByID(true)
@@ -258,10 +294,13 @@ func TestCreateOrderUseCase_Execute_StatusNotFound(t *testing.T) {
 }
 
 func TestCreateOrderUseCase_Execute_CreateError(t *testing.T) {
+	mocks.SetupEnv()
+	defer mocks.CleanupEnv()
+
 	mockOrderGateway := NewMockOrderGateway()
 	mockStatusGateway := NewMockOrderStatusGateway()
 	mockBroker := &MockMessageBroker{}
-	mockApiClient := &MockApiClient{}
+	mockApiClient := NewMockApiClient()
 
 	// Add initial status
 	initialStatus, _ := entities.NewOrderStatus(INITIAL_ORDER_STATUS_ID, "Pending")
@@ -288,4 +327,184 @@ func TestCreateOrderUseCase_Execute_CreateError(t *testing.T) {
 	if !order.IsEmpty() {
 		t.Error("Expected empty order when create fails")
 	}
+}
+
+func TestCreateOrderUseCase_Execute_ApiClientError(t *testing.T) {
+	mockOrderGateway := NewMockOrderGateway()
+	mockStatusGateway := NewMockOrderStatusGateway()
+	mockBroker := &MockMessageBroker{}
+	mockApiClient := NewMockApiClient()
+
+	// Add initial status
+	initialStatus, _ := entities.NewOrderStatus(INITIAL_ORDER_STATUS_ID, "Pending")
+	mockStatusGateway.AddStatus(initialStatus)
+
+	// Make API client fail
+	mockApiClient.SetShouldFail(true)
+
+	uc := NewCreateOrderUseCase(mockOrderGateway, mockStatusGateway, mockBroker, mockApiClient)
+
+	customerID := "customer-123"
+	items := []dtos.CreateOrderItemDTO{
+		{
+			ProductID: "product-1",
+			Quantity:  2,
+		},
+	}
+
+	order, err := uc.Execute(&customerID, items)
+	if err == nil {
+		t.Error("Expected error when API client fails")
+	}
+
+	if !order.IsEmpty() {
+		t.Error("Expected empty order when API client fails")
+	}
+}
+
+func TestCreateOrderUseCase_Execute_ProductInactive(t *testing.T) {
+	mockOrderGateway := NewMockOrderGateway()
+	mockStatusGateway := NewMockOrderStatusGateway()
+	mockBroker := &MockMessageBroker{}
+	mockApiClient := NewMockApiClient()
+
+	// Add initial status
+	initialStatus, _ := entities.NewOrderStatus(INITIAL_ORDER_STATUS_ID, "Pending")
+	mockStatusGateway.AddStatus(initialStatus)
+
+	// Set product as inactive
+	mockApiClient.SetProductInactive("product-inactive")
+
+	uc := NewCreateOrderUseCase(mockOrderGateway, mockStatusGateway, mockBroker, mockApiClient)
+
+	customerID := "customer-123"
+	items := []dtos.CreateOrderItemDTO{
+		{
+			ProductID: "product-inactive",
+			Quantity:  2,
+		},
+	}
+
+	order, err := uc.Execute(&customerID, items)
+	if err == nil {
+		t.Error("Expected error when product is inactive")
+	}
+
+	if _, ok := err.(*exceptions.OrderItemProductInactiveException); !ok {
+		t.Errorf("Expected OrderItemProductInactiveException, got %T", err)
+	}
+
+	if !order.IsEmpty() {
+		t.Error("Expected empty order when product is inactive")
+	}
+}
+
+func TestCreateOrderUseCase_Execute_MessageBrokerError(t *testing.T) {
+	mocks.SetupEnv()
+	defer mocks.CleanupEnv()
+
+	mockOrderGateway := NewMockOrderGateway()
+	mockStatusGateway := NewMockOrderStatusGateway()
+	mockBroker := &MockMessageBrokerWithError{}
+	mockApiClient := NewMockApiClient()
+
+	// Add initial status
+	initialStatus, _ := entities.NewOrderStatus(INITIAL_ORDER_STATUS_ID, "Pending")
+	mockStatusGateway.AddStatus(initialStatus)
+
+	uc := NewCreateOrderUseCase(mockOrderGateway, mockStatusGateway, mockBroker, mockApiClient)
+
+	customerID := "customer-123"
+	items := []dtos.CreateOrderItemDTO{
+		{
+			ProductID: "product-1",
+			Quantity:  2,
+		},
+	}
+
+	order, err := uc.Execute(&customerID, items)
+	if err == nil {
+		t.Error("Expected error when message broker fails")
+	}
+
+	if !order.IsEmpty() {
+		t.Error("Expected empty order when message broker fails")
+	}
+}
+
+func TestCreateOrderUseCase_Execute_InvalidOrderItem(t *testing.T) {
+	mockOrderGateway := NewMockOrderGateway()
+	mockStatusGateway := NewMockOrderStatusGateway()
+	mockBroker := &MockMessageBroker{}
+	mockApiClient := NewMockApiClient()
+
+	// Add initial status
+	initialStatus, _ := entities.NewOrderStatus(INITIAL_ORDER_STATUS_ID, "Pending")
+	mockStatusGateway.AddStatus(initialStatus)
+
+	// Set product to return invalid price (0) which will cause NewOrderItem to fail
+	mockApiClient.SetProductInvalidPrice("product-invalid-price")
+
+	uc := NewCreateOrderUseCase(mockOrderGateway, mockStatusGateway, mockBroker, mockApiClient)
+
+	customerID := "customer-123"
+	items := []dtos.CreateOrderItemDTO{
+		{
+			ProductID: "product-invalid-price",
+			Quantity:  2,
+		},
+	}
+
+	order, err := uc.Execute(&customerID, items)
+	if err == nil {
+		t.Error("Expected error when order item creation fails")
+	}
+
+	if !order.IsEmpty() {
+		t.Error("Expected empty order when order item creation fails")
+	}
+}
+
+func TestCreateOrderUseCase_Execute_EmptyItems(t *testing.T) {
+	mockOrderGateway := NewMockOrderGateway()
+	mockStatusGateway := NewMockOrderStatusGateway()
+	mockBroker := &MockMessageBroker{}
+	mockApiClient := NewMockApiClient()
+
+	// Add initial status
+	initialStatus, _ := entities.NewOrderStatus(INITIAL_ORDER_STATUS_ID, "Pending")
+	mockStatusGateway.AddStatus(initialStatus)
+
+	uc := NewCreateOrderUseCase(mockOrderGateway, mockStatusGateway, mockBroker, mockApiClient)
+
+	customerID := "customer-123"
+	items := []dtos.CreateOrderItemDTO{} // Empty items - CalcTotalAmount will fail
+
+	order, err := uc.Execute(&customerID, items)
+	if err == nil {
+		t.Error("Expected error when order has no items (CalcTotalAmount fails)")
+	}
+
+	if !order.IsEmpty() {
+		t.Error("Expected empty order when CalcTotalAmount fails")
+	}
+}
+
+// Mock message broker that returns error on publish
+type MockMessageBrokerWithError struct{}
+
+func (m *MockMessageBrokerWithError) ConsumeOrderUpdates(ctx context.Context, handler brokers.OrderUpdateHandler) error {
+	return nil
+}
+
+func (m *MockMessageBrokerWithError) ConsumeOrderError(ctx context.Context, handler brokers.OrderErrorHandler) error {
+	return nil
+}
+
+func (m *MockMessageBrokerWithError) PublishOnTopic(ctx context.Context, topic string, message interface{}) error {
+	return fmt.Errorf("message broker publish failed")
+}
+
+func (m *MockMessageBrokerWithError) Close() error {
+	return nil
 }
