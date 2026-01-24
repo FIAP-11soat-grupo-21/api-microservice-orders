@@ -49,7 +49,7 @@ func TestHTTPClient_Get_Success(t *testing.T) {
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(response)
+		_ = json.NewEncoder(w).Encode(response)
 	}))
 	defer server.Close()
 
@@ -67,7 +67,7 @@ func TestHTTPClient_Get_Success(t *testing.T) {
 func TestHTTPClient_Get_StatusNotFound(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte("Product not found"))
+		_, _ = w.Write([]byte("Product not found"))
 	}))
 	defer server.Close()
 
@@ -84,7 +84,7 @@ func TestHTTPClient_Get_StatusNotFound(t *testing.T) {
 func TestHTTPClient_Get_StatusBadRequest(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("Invalid request"))
+		_, _ = w.Write([]byte("Invalid request"))
 	}))
 	defer server.Close()
 
@@ -100,7 +100,7 @@ func TestHTTPClient_Get_StatusBadRequest(t *testing.T) {
 func TestHTTPClient_Get_StatusInternalServerError(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("Internal server error"))
+		_, _ = w.Write([]byte("Internal server error"))
 	}))
 	defer server.Close()
 
@@ -117,7 +117,7 @@ func TestHTTPClient_Get_InvalidJSON(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("invalid json response"))
+		_, _ = w.Write([]byte("invalid json response"))
 	}))
 	defer server.Close()
 
@@ -151,7 +151,7 @@ func TestHTTPClient_Get_EmptyResponse(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("{}"))
+		_, _ = w.Write([]byte("{}"))
 	}))
 	defer server.Close()
 
@@ -178,7 +178,7 @@ func TestHTTPClient_Get_MultipleRequests(t *testing.T) {
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(response)
+		_ = json.NewEncoder(w).Encode(response)
 	}))
 	defer server.Close()
 
@@ -213,7 +213,7 @@ func TestHTTPClient_Get_LargeResponse(t *testing.T) {
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(response)
+		_ = json.NewEncoder(w).Encode(response)
 	}))
 	defer server.Close()
 
@@ -235,7 +235,7 @@ func TestHTTPClient_Get_Status300Redirect(t *testing.T) {
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusMultipleChoices)
-		json.NewEncoder(w).Encode(response)
+		_ = json.NewEncoder(w).Encode(response)
 	}))
 	defer server.Close()
 
@@ -258,7 +258,7 @@ func TestHTTPClient_Get_Status201Created(t *testing.T) {
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
-		json.NewEncoder(w).Encode(response)
+		_ = json.NewEncoder(w).Encode(response)
 	}))
 	defer server.Close()
 
